@@ -43,11 +43,8 @@ public:
 
     virtual std::string GetName() const {return "Candle WINUSB";}
 
-    virtual std::vector<std::shared_ptr<CANDevice>> GetDevices();
-    virtual std::shared_ptr<CANDevice> GetDeviceFromDescriptor(const wchar_t* descriptor);
-
-private:
-    std::map<std::wstring, std::shared_ptr<CANDevice>> m_devices;
+    virtual std::vector<std::wstring> GetDevices();
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
 };
 
 } // namespace usb

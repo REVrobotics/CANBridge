@@ -42,8 +42,8 @@ public:
     virtual ~CANDriver() {}
 
     virtual std::string GetName() const = 0;
-    virtual std::vector<std::shared_ptr<CANDevice>> GetDevices() = 0;
-    virtual std::shared_ptr<CANDevice> GetDeviceFromDescriptor(const wchar_t* descriptor) = 0;
+    virtual std::vector<std::wstring> GetDevices() = 0;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) = 0;
 };
 
 } // namespace usb

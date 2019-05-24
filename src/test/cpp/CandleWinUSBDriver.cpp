@@ -37,30 +37,20 @@
 namespace rev {
 namespace usb {
 
-std::vector<std::shared_ptr<CANDevice>> CandleWinUSBDriver::GetDevices()
+std::vector<std::wstring> CandleWinUSBDriver::GetDevices()
 {
     // Search driver layer for devices
     candle_list_handle clist;
     uint8_t num_interfaces;
     candle_handle dev;
-    std::vector<std::shared_ptr<CANDevice>> retval;
+    std::vector<std::wstring> retval;
 
     if (candle_list_scan(&clist)) {
         if (candle_list_length(clist, &num_interfaces)) {
             for (uint8_t i=0; i<num_interfaces; i++) {
                 if (candle_dev_get(clist, i, &dev)) {
                     std::wstring path(candle_dev_get_path(dev));
-                    auto itr = m_devices.find(path);
-                    std::shared_ptr<CANDevice> pDev;
-
-                    if (itr == m_devices.end()) {
-                        // New device, add to list and internal map
-                        pDev = std::make_shared<CandleWinUSBDevice>(dev);
-                        m_devices[path] = pDev;
-                    } else {                        
-                        pDev = itr->second;
-                    }
-                    retval.push_back(pDev);
+                    retval.push_back(path);
                 }
             }
         }
@@ -68,6 +58,30 @@ std::vector<std::shared_ptr<CANDevice>> CandleWinUSBDriver::GetDevices()
     }
 
     return retval;
+}
+
+std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
+{
+    // Search driver layer for devices
+    candle_list_handle clist;
+    uint8_t num_interfaces;
+    candle_handle dev;
+
+    if (candle_list_scan(&clist)) {
+        if (candle_list_length(clist, &num_interfaces)) {
+            for (uint8_t i=0; i<num_interfaces; i++) {
+                if (candle_dev_get(clist, i, &dev)) {
+                    std::wstring path(candle_dev_get_path(dev));
+
+                    if (path == std::wstring(descriptor)) {
+                        return std::make_unique<CandleWinUSBDevice>(dev); 
+                    }
+                }
+            }
+        }
+        candle_list_free(clist);
+    }
+    return std::unique_ptr<CANDevice>();
 }
 
 } // namespace usb

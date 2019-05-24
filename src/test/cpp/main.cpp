@@ -21,8 +21,13 @@ int main(int argc, char** argv) {
     std::cout << "\t" << USBSparkMax_GetDeviceName(handle, i) << std::endl;
   }
 
+  if (numDevices == 1) {
+    std::cout << "Registering single device to HAL" << std::endl;
+    USBSparkMax_RegisterDeviceToHAL(USBSparkMax_GetDeviceName(handle, 0));
+  }
+
   USBSparkMax_Close(handle);
-  //USBSparkMax_RegisterHAL();
+
 
   return 0;
 }

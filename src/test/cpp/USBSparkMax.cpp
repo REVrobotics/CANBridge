@@ -5,19 +5,20 @@
 #include <iostream>
 
 #include "CANDriver.h"
+#include "CANDevice.h"
 #include "CandleWinUSBDriver.h"
 
 #include <mockdata/CanData.h>
 
 struct USBSparkMax_Scan {
-    std::vector<std::wstring*> devices;
+    std::vector<std::wstring> devices;
 };
 
 static const std::vector<rev::usb::CANDriver*> CANDriverList = {
     new rev::usb::CandleWinUSBDriver()
 };
 
-static std::vector<rev::usb::CANDevice> CANDeviceList = {};
+static std::vector<std::unique_ptr<rev::usb::CANDevice>> CANDeviceList = {};
 
 c_USBSparkMax_ScanHandle USBSparkMax_Scan()
 {
@@ -25,9 +26,8 @@ c_USBSparkMax_ScanHandle USBSparkMax_Scan()
     int i=0;
 
     for (auto& driver : CANDriverList) {
-        for (const auto& d : driver->GetDevices()) {
-            auto tmp = new std::wstring(d->GetDescriptor());
-            handle->devices.push_back(tmp);
+        for (auto d : driver->GetDevices()) {
+            handle->devices.push_back(d);
         }
     }
 
@@ -45,20 +45,12 @@ const wchar_t* USBSparkMax_GetDeviceName(c_USBSparkMax_ScanHandle handle, int in
         return NULL;
     }
 
-    return handle->devices[index]->c_str();
+    return handle->devices[index].c_str();
 }
 
 void USBSparkMax_Close(c_USBSparkMax_ScanHandle handle)
 {
-    for (auto d : handle->devices) {
-        delete d;
-    }
     delete handle;
-}
-
-void USBSparkMax_RegisterDeviceToHAL(const wchar_t* name)
-{
-
 }
 
 void USBSparkMax_SendMessageCallback(const char* name, void* param,
@@ -107,12 +99,32 @@ void USBSparkMax_GetCANStatusCallback(
     
 }
 
-void USBSparkMax_RegisterDeviceToHAL(const char* name)
+static std::vector<int32_t> LocalCallbackStore;
+
+static void USBSparkMax_RegisterHAL()
 {
-    HALSIM_RegisterCanSendMessageCallback(USBSparkMax_SendMessageCallback, NULL);
-    HALSIM_RegisterCanReceiveMessageCallback(USBSparkMax_ReceiveMessageCallback, NULL);
-    HALSIM_RegisterCanOpenStreamCallback(USBSparkMax_OpenStreamSessionCallback, NULL);
-    HALSIM_RegisterCanCloseStreamCallback(USBSparkMax_CloseStreamSessionCallback, NULL);
-    HALSIM_RegisterCanReadStreamCallback(USBSparkMax_ReadStreamSessionCallback, NULL);
-    HALSIM_RegisterCanGetCANStatusCallback(USBSparkMax_GetCANStatusCallback, NULL);
+    if (LocalCallbackStore.size() == 0) {
+        LocalCallbackStore.push_back(HALSIM_RegisterCanSendMessageCallback(USBSparkMax_SendMessageCallback, NULL));
+        LocalCallbackStore.push_back(HALSIM_RegisterCanReceiveMessageCallback(USBSparkMax_ReceiveMessageCallback, NULL));
+        LocalCallbackStore.push_back(HALSIM_RegisterCanOpenStreamCallback(USBSparkMax_OpenStreamSessionCallback, NULL));
+        LocalCallbackStore.push_back(HALSIM_RegisterCanCloseStreamCallback(USBSparkMax_CloseStreamSessionCallback, NULL));
+        LocalCallbackStore.push_back(HALSIM_RegisterCanReadStreamCallback(USBSparkMax_ReadStreamSessionCallback, NULL));
+        LocalCallbackStore.push_back(HALSIM_RegisterCanGetCANStatusCallback(USBSparkMax_GetCANStatusCallback, NULL));
+    }
+}
+
+void USBSparkMax_RegisterDeviceToHAL(const wchar_t* descriptor)
+{
+    c_USBSparkMax_ScanHandle handle = new struct USBSparkMax_Scan;
+    int i=0;
+    USBSparkMax_RegisterHAL();
+
+    for (auto& driver : CANDriverList) {
+        for (auto d : driver->GetDevices()) {
+            if (d.compare(descriptor) == 0) {
+                CANDeviceList.push_back(driver->CreateDeviceFromDescriptor(descriptor));
+                return;
+            }
+        }
+    }
 }
