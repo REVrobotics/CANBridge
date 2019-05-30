@@ -31,6 +31,8 @@
 #include <string>
 
 #include "CANDevice.h"
+#include "CANMessage.h"
+#include "CANStatus.h"
 
 namespace rev {
 namespace usb {
@@ -45,13 +47,13 @@ public:
 
     virtual int GetId() const = 0;
 
-    virtual void SendMessage() = 0;
-    virtual void RecieveMessage() = 0;
-    virtual void OpenStreamSession() = 0;
-    virtual void CloseStreamSession() = 0;
-    virtual void ReadStreamSession() = 0;
+    virtual CANStatus SendMessage(CANMessage msg, int periodMs) = 0;
+    virtual CANStatus RecieveMessage(CANMessage& msg) = 0;
+    virtual CANStatus OpenStreamSession() = 0;
+    virtual CANStatus CloseStreamSession() = 0;
+    virtual CANStatus ReadStreamSession() = 0;
 
-    virtual void GetCANStatus() = 0;
+    virtual CANStatus GetCANStatus() = 0;
 
     virtual bool IsConnected() = 0;
 };

@@ -48,7 +48,7 @@ const wchar_t* USBSparkMax_GetDeviceName(c_USBSparkMax_ScanHandle handle, int in
     return handle->devices[index].c_str();
 }
 
-void USBSparkMax_Close(c_USBSparkMax_ScanHandle handle)
+void USBSparkMax_FreeScan(c_USBSparkMax_ScanHandle handle)
 {
     delete handle;
 }
@@ -59,7 +59,12 @@ void USBSparkMax_SendMessageCallback(const char* name, void* param,
                                             uint8_t dataSize, int32_t periodMs,
                                             int32_t* status)
 {
-    
+    // TODO: Could have a qualifier for what traffic goes where (i.e. if you have multiple drivers)
+    // for now (testing), only use the first in the list
+    if (CANDeviceList.size() > 0) {
+        auto stat = CANDeviceList[0]->SendMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
+        *status = static_cast<int32_t>(stat);
+    }
 }
 
 void USBSparkMax_ReceiveMessageCallback(

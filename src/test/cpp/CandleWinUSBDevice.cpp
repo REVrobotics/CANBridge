@@ -59,28 +59,28 @@ int CandleWinUSBDevice::GetId() const
     return 0;
 }
 
-void CandleWinUSBDevice::SendMessage()
+CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
 {
 
 }
-void CandleWinUSBDevice::RecieveMessage()
+CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg)
 {
     
 }
-void CandleWinUSBDevice::OpenStreamSession()
+CANStatus CandleWinUSBDevice::OpenStreamSession()
 {
     
 }
-void CandleWinUSBDevice::CloseStreamSession()
+CANStatus CandleWinUSBDevice::CloseStreamSession()
 {
     
 }
-void CandleWinUSBDevice::ReadStreamSession()
+CANStatus CandleWinUSBDevice::ReadStreamSession()
 {
     
 }
 
-void CandleWinUSBDevice::GetCANStatus()
+CANStatus CandleWinUSBDevice::GetCANStatus()
 {
     
 }

@@ -28,40 +28,13 @@
 
 #pragma once
 
-#include <map>
-#include <string>
-
-#include "candle.h"
-
-#include "CANDevice.h"
-#include "CANMessage.h"
-#include "CANStatus.h"
-
 namespace rev {
 namespace usb {
 
-class CandleWinUSBDevice : public CANDevice {
-public:
-    CandleWinUSBDevice(candle_handle hDev);
-    ~CandleWinUSBDevice();
-
-    virtual std::string GetName() const;
-    virtual std::wstring GetDescriptor() const;
-
-    virtual int GetId() const;
-
-    virtual CANStatus SendMessage(CANMessage msg, int periodMs);
-    virtual CANStatus RecieveMessage(CANMessage& msg);
-    virtual CANStatus OpenStreamSession();
-    virtual CANStatus CloseStreamSession();
-    virtual CANStatus ReadStreamSession();
-
-    virtual CANStatus GetCANStatus();
-
-    virtual bool IsConnected();
-private:
-    CandleWinUSBDevice() {}
-    candle_handle m_handle;
+enum class CANStatus {
+    kOk = 0,
+    kError = 1,
+    kTimeout = 2
 };
 
 } // namespace usb

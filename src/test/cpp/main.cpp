@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     USBSparkMax_RegisterDeviceToHAL(USBSparkMax_GetDeviceName(handle, 0));
   }
 
-  USBSparkMax_Close(handle);
+  USBSparkMax_FreeScan(handle);
 
 
   return 0;
