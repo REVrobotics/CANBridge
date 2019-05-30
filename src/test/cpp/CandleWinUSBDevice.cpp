@@ -63,7 +63,7 @@ CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
 {
 
 }
-CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg)
+CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
 {
     
 }

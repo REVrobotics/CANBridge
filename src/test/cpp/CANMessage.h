@@ -109,6 +109,10 @@ public:
         return retval | (static_cast<uint32_t>(type) & 0x1F) << 24;
     }
 
+    uint32_t GetMessageId() {
+        return m_messageId;
+    }
+
     uint16_t GetDeviceId() {
         return m_messageId & 0x3F;
     }
@@ -122,6 +126,14 @@ public:
     }
     CANManufacturer GetManufacturer() {
         return static_cast<CANManufacturer>(((m_messageId & 0x00FF0000) >> 16));
+    }
+
+    const uint8_t* GetData() {
+        return m_data;
+    }
+
+    uint8_t GetSize() {
+        return m_size;
     }
 
 private:

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 #include "CANDriver.h"
 #include "CANDevice.h"
@@ -14,11 +15,22 @@ struct USBSparkMax_Scan {
     std::vector<std::wstring> devices;
 };
 
+struct USBSparkMax_CANDevice {
+    std::unique_ptr<rev::usb::CANDevice> m_device;
+    uint32_t m_messageId;
+    uint32_t m_messageMask;
+};
+
 static const std::vector<rev::usb::CANDriver*> CANDriverList = {
     new rev::usb::CandleWinUSBDriver()
 };
 
-static std::vector<std::unique_ptr<rev::usb::CANDevice>> CANDeviceList = {};
+static struct std::vector<USBSparkMax_CANDevice> CANDeviceList = {};
+
+static int32_t USBSparkMax_StatusToHALError(rev::usb::CANStatus status) {
+    // TODO: Map these to the actual HAL error codes
+    return static_cast<int32_t>(status);
+}
 
 c_USBSparkMax_ScanHandle USBSparkMax_Scan()
 {
@@ -53,25 +65,80 @@ void USBSparkMax_FreeScan(c_USBSparkMax_ScanHandle handle)
     delete handle;
 }
 
+static bool USBSparkMax_ProcessMask(const USBSparkMax_CANDevice& device, uint32_t id, uint32_t mask = 0) 
+{
+    return true;
+}
+
 void USBSparkMax_SendMessageCallback(const char* name, void* param,
                                             uint32_t messageID,
                                             const uint8_t* data,
                                             uint8_t dataSize, int32_t periodMs,
                                             int32_t* status)
 {
-    // TODO: Could have a qualifier for what traffic goes where (i.e. if you have multiple drivers)
-    // for now (testing), only use the first in the list
-    if (CANDeviceList.size() > 0) {
-        auto stat = CANDeviceList[0]->SendMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
-        *status = static_cast<int32_t>(stat);
+    for (auto& dev : CANDeviceList) {
+        if (USBSparkMax_ProcessMask(dev, messageID)) {
+            auto stat = dev.m_device->SendMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
+            *status = USBSparkMax_StatusToHALError(stat);
+        }
     }
 }
+
+struct USBSparkMax_CANRecieve {
+    rev::usb::CANMessage m_message;
+    uint32_t m_timestamp;
+    int32_t m_status;
+
+    bool operator()(struct USBSparkMax_CANRecieve a, struct USBSparkMax_CANRecieve b) const
+    {   
+        return a.m_timestamp < b.m_timestamp;
+    } 
+};
 
 void USBSparkMax_ReceiveMessageCallback(
     const char* name, void* param, uint32_t* messageID, uint32_t messageIDMask,
     uint8_t* data, uint8_t* dataSize, uint32_t* timeStamp, int32_t* status)
 {
-    
+    std::vector<struct USBSparkMax_CANRecieve> recieves;
+
+    // 1) Recieve on all registered channels
+    for (auto& dev : CANDeviceList) {
+            struct USBSparkMax_CANRecieve msg;
+            auto stat = dev.m_device->RecieveMessage(msg.m_message, messageIDMask, msg.m_timestamp);
+
+        if (USBSparkMax_ProcessMask(dev, msg.m_message.GetMessageId(), messageIDMask)) {
+            msg.m_status = USBSparkMax_StatusToHALError(stat);
+            recieves.push_back(msg);
+        }
+    }
+
+    if (recieves.size() == 0) {
+        // TODO: what is the correct error return here
+        *status = USBSparkMax_StatusToHALError(rev::usb::CANStatus::kError);
+        return;
+    }
+
+    // 2) Return the newest message that does not have an error
+    std::sort(recieves.begin(), recieves.end());
+
+    for (auto& recv : recieves) {
+        if (recv.m_status == 0) {
+            *timeStamp = recv.m_timestamp;
+            *status = recv.m_status;
+            *messageID = recv.m_message.GetMessageId();
+            *dataSize = recv.m_message.GetSize();
+
+            if(*dataSize > 8) {
+                *dataSize = 8;
+            }
+
+            memcpy(data, recv.m_message.GetData(), *dataSize);
+            return;
+        }
+    }
+
+    // 3) Return an error if necessary
+    *status = recieves[0].m_status;
 }
 
 void USBSparkMax_OpenStreamSessionCallback(
@@ -118,7 +185,7 @@ static void USBSparkMax_RegisterHAL()
     }
 }
 
-void USBSparkMax_RegisterDeviceToHAL(const wchar_t* descriptor)
+void USBSparkMax_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask)
 {
     c_USBSparkMax_ScanHandle handle = new struct USBSparkMax_Scan;
     int i=0;
@@ -127,7 +194,11 @@ void USBSparkMax_RegisterDeviceToHAL(const wchar_t* descriptor)
     for (auto& driver : CANDriverList) {
         for (auto d : driver->GetDevices()) {
             if (d.compare(descriptor) == 0) {
-                CANDeviceList.push_back(driver->CreateDeviceFromDescriptor(descriptor));
+                USBSparkMax_CANDevice dev;
+                dev.m_device = driver->CreateDeviceFromDescriptor(descriptor);
+                dev.m_messageId = messageId;
+                dev.m_messageMask = messageMask;
+                CANDeviceList.push_back(dev);
                 return;
             }
         }

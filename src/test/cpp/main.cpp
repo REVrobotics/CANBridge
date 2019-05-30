@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
   if (numDevices == 1) {
     std::cout << "Registering single device to HAL" << std::endl;
-    USBSparkMax_RegisterDeviceToHAL(USBSparkMax_GetDeviceName(handle, 0));
+    USBSparkMax_RegisterDeviceToHAL(USBSparkMax_GetDeviceName(handle, 0), 0, 0);
   }
 
   USBSparkMax_FreeScan(handle);
