@@ -28,6 +28,9 @@
 
 #include "CandleWinUSBDevice.h"
 
+#define CANDLE_DEFAULT_CHANNEL 0
+#define CANDLE_DEFAULT_FLAGS    (candle_device_mode_flags_t)(CANDLE_MODE_NORMAL | CANDLE_MODE_PAD_PKTS_TO_MAX_PKT_SIZE)
+
 namespace rev {
 namespace usb {
 
@@ -35,6 +38,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev)
 {
     m_handle = hDev;
     candle_dev_open(hDev);
+    candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS);
 }
 
 CandleWinUSBDevice::~CandleWinUSBDevice()
@@ -61,28 +65,28 @@ int CandleWinUSBDevice::GetId() const
 
 CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
 {
-
+    return CANStatus::kOk;
 }
 CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
 {
-    
+    return CANStatus::kOk;
 }
 CANStatus CandleWinUSBDevice::OpenStreamSession()
 {
-    
+    return CANStatus::kOk;
 }
 CANStatus CandleWinUSBDevice::CloseStreamSession()
 {
-    
+    return CANStatus::kOk;
 }
 CANStatus CandleWinUSBDevice::ReadStreamSession()
 {
-    
+    return CANStatus::kOk;
 }
 
 CANStatus CandleWinUSBDevice::GetCANStatus()
 {
-    
+    return CANStatus::kOk;
 }
 
 bool CandleWinUSBDevice::IsConnected()

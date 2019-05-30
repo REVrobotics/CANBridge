@@ -73,7 +73,7 @@ enum class CANManufacturer {
 
 class CANMessage {
 public:
-    CANMessage() : m_data({0}), m_size(0), m_messageId(0) { }
+    CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
     CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize) :
         m_size(dataSize), m_messageId(messageId) {
             memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
