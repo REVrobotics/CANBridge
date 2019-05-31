@@ -33,6 +33,7 @@
 
 #include "candle.h"
 
+#include "CandleWinUSBDeviceThread.h"
 #include "CANDevice.h"
 #include "CANMessage.h"
 #include "CANStatus.h"
@@ -42,6 +43,7 @@ namespace usb {
 
 class CandleWinUSBDevice : public CANDevice {
 public:
+    CandleWinUSBDevice() =delete;
     CandleWinUSBDevice(candle_handle hDev);
     ~CandleWinUSBDevice();
 
@@ -60,8 +62,9 @@ public:
 
     virtual bool IsConnected();
 private:
-    CandleWinUSBDevice() {}
     candle_handle m_handle;
+    CandleWinUSBDeviceThread m_thread;
+    std::wstring m_descriptor;
 };
 
 } // namespace usb

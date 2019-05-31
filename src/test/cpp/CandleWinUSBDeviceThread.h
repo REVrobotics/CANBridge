@@ -26,79 +26,63 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CandleWinUSBDevice.h"
+#pragma once
 
-#include <iostream> //TODO: Remove
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <queue>
+#include <map>
+#include <vector>
 
-#define CANDLE_DEFAULT_CHANNEL 0
-#define CANDLE_DEFAULT_FLAGS    (candle_device_mode_flags_t)(CANDLE_MODE_NORMAL | CANDLE_MODE_PAD_PKTS_TO_MAX_PKT_SIZE)
+#include "CANMessage.h"
+
+#include "candle.h"
 
 namespace rev {
 namespace usb {
 
-CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev)
-{
-    m_handle = hDev;
-    candle_dev_open(hDev);
-    candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS);
-    m_descriptor = candle_dev_get_path(m_handle);
-}
+class CandleWinUSBDeviceThread { 
+public:
+    CandleWinUSBDeviceThread() =delete;
+    CandleWinUSBDeviceThread(candle_handle dev) : 
+        m_device(dev),
+        m_threadComplete(false) 
+    {
+        m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
+    }
+    ~CandleWinUSBDeviceThread()
+    {
+        m_threadComplete = true;
+        if (m_thread.joinable()) {
+            m_thread.join();
+        }
+    }
 
-CandleWinUSBDevice::~CandleWinUSBDevice()
-{
-    candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
-    candle_dev_close(m_handle);
-    candle_dev_free(m_handle);
-}
+    bool EnqueueMessage(const CANMessage& msg) {
+        m_mutex.lock();
+        m_sendQueue.push(msg);
+        m_mutex.unlock();
 
-std::string CandleWinUSBDevice::GetName() const
-{
-    return "SPARK MAX";
-}
+        // TODO: Limit the max queue size
+        return true;
+    }
 
+private:
+    std::atomic_bool m_threadComplete;
+    std::thread m_thread;
+    std::mutex m_mutex;
 
-std::wstring CandleWinUSBDevice::GetDescriptor() const
-{
-    return m_descriptor;
-}
+    std::queue<CANMessage> m_sendQueue;
+    std::map<uint32_t, std::vector<CANMessage>> m_recvStore;
 
-int CandleWinUSBDevice::GetId() const
-{
-    return 0;
-}
-
-CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
-{
-    return CANStatus::kOk;
-}
-CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
-{
-    return CANStatus::kOk;
-}
-CANStatus CandleWinUSBDevice::OpenStreamSession()
-{
-    return CANStatus::kOk;
-}
-CANStatus CandleWinUSBDevice::CloseStreamSession()
-{
-    return CANStatus::kOk;
-}
-CANStatus CandleWinUSBDevice::ReadStreamSession()
-{
-    return CANStatus::kOk;
-}
-
-CANStatus CandleWinUSBDevice::GetCANStatus()
-{
-    return CANStatus::kOk;
-}
-
-bool CandleWinUSBDevice::IsConnected()
-{
-    return true;
-}
-
+    candle_handle m_device;
+    void run() {
+        while (m_threadComplete == false) {
+            
+        }
+    }
+}; 
 
 } // namespace usb
 } // namespace rev
