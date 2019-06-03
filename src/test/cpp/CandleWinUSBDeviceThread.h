@@ -42,12 +42,29 @@
 namespace rev {
 namespace usb {
 
+namespace detail {
+
+class CANThreadSendQueueElement {
+public:
+    CANThreadSendQueueElement() =delete;
+    CANThreadSendQueueElement(CANMessage msg, int32_t intervalMs) : 
+        m_msg(msg), m_intervalMs(intervalMs), m_prevTimestamp(std::chrono::steady_clock::now()) {
+
+    }
+    CANMessage m_msg;
+    int32_t m_intervalMs;
+    std::chrono::time_point<std::chrono::steady_clock> m_prevTimestamp;
+};
+
+} // namespace detail
+
 class CandleWinUSBDeviceThread { 
 public:
     CandleWinUSBDeviceThread() =delete;
-    CandleWinUSBDeviceThread(candle_handle dev) : 
+    CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : 
         m_device(dev),
-        m_threadComplete(false) 
+        m_threadComplete(false),
+        m_threadIntervalMs(threadIntervalMs)
     {
         m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
@@ -59,10 +76,10 @@ public:
         }
     }
 
-    bool EnqueueMessage(const CANMessage& msg) {
-        m_mutex.lock();
-        m_sendQueue.push(msg);
-        m_mutex.unlock();
+    bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
+        m_sendMutex.lock();
+        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+        m_sendMutex.unlock();
 
         // TODO: Limit the max queue size
         return true;
@@ -71,15 +88,73 @@ public:
 private:
     std::atomic_bool m_threadComplete;
     std::thread m_thread;
-    std::mutex m_mutex;
+    std::mutex m_sendMutex;
+    std::mutex m_recvMutex;
 
-    std::queue<CANMessage> m_sendQueue;
-    std::map<uint32_t, std::vector<CANMessage>> m_recvStore;
+    std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
+    std::map<uint32_t, std::queue<CANMessage>> m_recvStore;
 
     candle_handle m_device;
+
+    long long m_threadIntervalMs;
+
     void run() {
         while (m_threadComplete == false) {
-            
+            auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
+
+            // 1) Handle all recieved CAN traffic
+            bool running = true;
+            while (running) {
+                candle_frame_t incomingFrame;
+                running = candle_frame_read(m_device, &incomingFrame, 0);
+
+                // Recieved a new frame, store it
+                if (running) {
+                    CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc);
+
+                    // TODO: The queue is for streaming API, implement that here
+                    m_recvMutex.lock();
+                    if (m_recvStore[incomingFrame.can_id].size() > 1) {
+                        m_recvStore[incomingFrame.can_id].pop();
+                    }
+                    m_recvStore[incomingFrame.can_id].push(msg);
+                    m_recvMutex.unlock();
+                }
+            }
+
+            // 2) Schedule CANMessage queue
+            m_sendMutex.lock();
+            size_t queueSize = m_sendQueue.size();
+
+            for (int i=0;i<queueSize;i++) {
+                detail::CANThreadSendQueueElement el = m_sendQueue.front();
+                m_sendQueue.pop();
+                if (el.m_intervalMs == -1) {
+                    continue;
+                }
+
+                auto now = std::chrono::steady_clock::now();
+
+                if (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
+                    candle_frame_t frame;
+                    frame.can_dlc = el.m_msg.GetSize();
+                    frame.can_id = el.m_msg.GetMessageId();
+                    memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
+                    frame.timestamp_us = now.time_since_epoch().count() / 1000;
+                    candle_frame_send(m_device, 0, &frame, false, 0);
+                }
+
+                // Return to queue if repeated
+                if (el.m_intervalMs > 0 ) {
+                    el.m_prevTimestamp = now;
+                    m_sendQueue.push(el);
+                }
+            }
+
+            m_sendMutex.unlock();
+
+            // 3) Stall thread
+            std::this_thread::sleep_until(sleepTime);
         }
     }
 }; 

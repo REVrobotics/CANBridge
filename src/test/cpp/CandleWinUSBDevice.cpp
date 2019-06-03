@@ -70,12 +70,14 @@ int CandleWinUSBDevice::GetId() const
 
 CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
 {
-    return CANStatus::kOk;
+    m_thread.EnqueueMessage(msg, periodMs);
 }
+
 CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
 {
     return CANStatus::kOk;
 }
+
 CANStatus CandleWinUSBDevice::OpenStreamSession()
 {
     return CANStatus::kOk;
