@@ -32,8 +32,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-#include "CANDevice.h"
+#include <iostream>
 
 namespace rev {
 namespace usb {
@@ -109,31 +108,35 @@ public:
         return retval | (static_cast<uint32_t>(type) & 0x1F) << 24;
     }
 
-    uint32_t GetMessageId() {
+    uint32_t GetMessageId() const {
         return m_messageId;
     }
 
-    uint16_t GetDeviceId() {
+    uint16_t GetDeviceId() const {
         return m_messageId & 0x3F;
     }
 
-    uint16_t GetApiId() {
+    uint16_t GetApiId() const {
         return static_cast<uint16_t>((m_messageId & 0xFFC0) >> 6);
     }
 
-    CANDeviceType GetDeviceType() {
+    CANDeviceType GetDeviceType() const {
         return static_cast<CANDeviceType>(((m_messageId & 0x1F000000) >> 24));
     }
-    CANManufacturer GetManufacturer() {
+    CANManufacturer GetManufacturer() const {
         return static_cast<CANManufacturer>(((m_messageId & 0x00FF0000) >> 16));
     }
 
-    const uint8_t* GetData() {
+    const uint8_t* GetData() const {
         return m_data;
     }
 
-    uint8_t GetSize() {
+    uint8_t GetSize() const {
         return m_size;
+    }
+
+    friend std::ostream& operator<<(std::ostream &os, const CANMessage& m) { 
+        return os << "Message Id: " << m.GetMessageId() << " Size: " << m.GetSize() << " Data: " << std::hex << m.GetData();
     }
 
 private:
@@ -144,3 +147,7 @@ private:
 
 } // namespace usb
 } // namespace rev
+
+//std::ostream& operator<<(std::ostream &os, const rev::usb::CANMessage& m) { 
+//    return os << "Message Id: " << m.GetMessageId() << " Size: " << m.GetSize() << " Data: " << std::hex << m.GetData();
+//}

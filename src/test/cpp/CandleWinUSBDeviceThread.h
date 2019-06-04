@@ -34,6 +34,7 @@
 #include <queue>
 #include <map>
 #include <vector>
+#include <iostream> // TODO: remove me
 
 #include "CANMessage.h"
 
@@ -66,14 +67,24 @@ public:
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs)
     {
-        m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
+        //m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
     ~CandleWinUSBDeviceThread()
     {
+    }
+
+    void Start() {
+        std::cout << "Starting Thread..." << std::endl;
+        m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
+    }
+
+    void Stop() {
+        std::cout << "Stopping Thread..." << std::endl;
         m_threadComplete = true;
         if (m_thread.joinable()) {
             m_thread.join();
         }
+        std::cout << "Thread Stopped." << std::endl;
     }
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
@@ -84,6 +95,8 @@ public:
         // TODO: Limit the max queue size
         return true;
     }
+
+    bool RecieveMessage(CANMessage& msg);
 
 private:
     std::atomic_bool m_threadComplete;
@@ -99,18 +112,22 @@ private:
     long long m_threadIntervalMs;
 
     void run() {
+        std::cout << "Thread starting!" << std::endl;
+
         while (m_threadComplete == false) {
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 
             // 1) Handle all recieved CAN traffic
-            bool running = true;
-            while (running) {
+            bool reading = true;
+            while (reading) {
                 candle_frame_t incomingFrame;
-                running = candle_frame_read(m_device, &incomingFrame, 0);
+                reading = candle_frame_read(m_device, &incomingFrame, 0);
 
                 // Recieved a new frame, store it
-                if (running) {
+                if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc);
+
+                    std::cout << "Recieved Message: " << msg << std::endl;
 
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
@@ -156,6 +173,7 @@ private:
             // 3) Stall thread
             std::this_thread::sleep_until(sleepTime);
         }
+        std::cout << "Thread Killed!" << std::endl;
     }
 }; 
 

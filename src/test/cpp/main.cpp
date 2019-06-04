@@ -1,8 +1,12 @@
 #include <hal/HAL.h>
 
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "USBSparkMax.h"
+
+#include <rev/CANSparkMax.h>
 
 int main(int argc, char** argv) {
   HAL_Initialize(500, 0);
@@ -28,6 +32,14 @@ int main(int argc, char** argv) {
 
   USBSparkMax_FreeScan(handle);
 
+  std::cout << "Starting Robot..." << std::endl;
+
+  rev::CANSparkMax m_motor(6, rev::CANSparkMax::MotorType::kBrushless);
+
+  while (1) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    m_motor.Set(0.5);
+  }
 
   return 0;
 }

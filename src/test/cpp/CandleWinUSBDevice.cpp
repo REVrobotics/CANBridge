@@ -37,16 +37,19 @@
 namespace rev {
 namespace usb {
 
-CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev)
+CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
+    m_thread(hDev)
 {
     m_handle = hDev;
     candle_dev_open(hDev);
     candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS);
     m_descriptor = candle_dev_get_path(m_handle);
+    m_thread.Start();
 }
 
 CandleWinUSBDevice::~CandleWinUSBDevice()
 {
+    m_thread.Stop();
     candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
     candle_dev_close(m_handle);
     candle_dev_free(m_handle);
@@ -71,6 +74,7 @@ int CandleWinUSBDevice::GetId() const
 CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
 {
     m_thread.EnqueueMessage(msg, periodMs);
+    return CANStatus::kOk;
 }
 
 CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)

@@ -30,7 +30,6 @@
 
 #include <string>
 
-#include "CANDevice.h"
 #include "CANMessage.h"
 #include "CANStatus.h"
 
