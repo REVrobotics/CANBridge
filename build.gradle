@@ -83,7 +83,6 @@ model {
     testSuites {
         frcUserProgramTest(GoogleTestTestSuiteSpec) {
             testing $.components.frcUserProgram
-            targetPlatform = 'windowsx86-64'
 
             sources.cpp {
                 source {

@@ -46,7 +46,7 @@ public:
 
     virtual int GetId() const = 0;
 
-    virtual CANStatus SendMessage(CANMessage msg, int periodMs) = 0;
+    virtual CANStatus SendMessage(const CANMessage& msg, int periodMs) = 0;
     virtual CANStatus RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) = 0;
     virtual CANStatus OpenStreamSession() = 0;
     virtual CANStatus CloseStreamSession() = 0;

@@ -71,7 +71,7 @@ int CandleWinUSBDevice::GetId() const
     return 0;
 }
 
-CANStatus CandleWinUSBDevice::SendMessage(CANMessage msg, int periodMs)
+CANStatus CandleWinUSBDevice::SendMessage(const CANMessage& msg, int periodMs)
 {
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
