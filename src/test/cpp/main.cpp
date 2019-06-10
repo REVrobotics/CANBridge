@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
 
   USBSparkMax_FreeScan(handle);
 
-  std::cout << "Starting Robot..." << std::endl;
+  std::cout << "Starting Robot... Press 'a' to stop" << std::endl;
 
   rev::CANSparkMax m_motor(6, rev::CANSparkMax::MotorType::kBrushless);
 

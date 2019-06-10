@@ -73,8 +73,8 @@ enum class CANManufacturer {
 class CANMessage {
 public:
     CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
-    CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize) :
-        m_size(dataSize), m_messageId(messageId) {
+    CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize, uint32_t timestampUs = 0) :
+        m_size(dataSize), m_messageId(messageId), m_timestamp(timestampUs) {
             memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
     }
 
@@ -135,6 +135,10 @@ public:
         return m_size;
     }
 
+    uint32_t GetTimestampUs() const {
+        return m_timestamp;
+    }
+
     friend std::ostream& operator<<(std::ostream &os, const CANMessage& m) { 
         return os << "Message Id: " << m.GetMessageId() << " Size: " << m.GetSize() << " Data: " << std::hex << m.GetData();
     }
@@ -143,6 +147,7 @@ private:
     uint8_t m_data[8];
     uint8_t m_size;
     uint32_t m_messageId;
+    uint32_t m_timestamp;
 };
 
 } // namespace usb

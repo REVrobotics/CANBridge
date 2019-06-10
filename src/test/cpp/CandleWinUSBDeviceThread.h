@@ -125,7 +125,7 @@ private:
 
                 // Recieved a new frame, store it
                 if (reading) {
-                    CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc);
+                    CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
 
                     std::cout << "Recieved Message: " << msg << std::endl;
 
@@ -152,13 +152,17 @@ private:
 
                 auto now = std::chrono::steady_clock::now();
 
-                if (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
+                if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
                     candle_frame_t frame;
                     frame.can_dlc = el.m_msg.GetSize();
                     frame.can_id = el.m_msg.GetMessageId();
                     memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
                     frame.timestamp_us = now.time_since_epoch().count() / 1000;
-                    candle_frame_send(m_device, 0, &frame, false, 0);
+                    if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
+                        std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                    } else {
+                        std::cout << "Frame sent successfully" << std::endl;
+                    }
                 }
 
                 // Return to queue if repeated
