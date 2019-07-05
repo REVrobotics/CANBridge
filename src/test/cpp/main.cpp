@@ -21,6 +21,10 @@ int main(int argc, char** argv) {
 
   std::cout << "Found " << numDevices << " Devices: " << std::endl;
 
+  if (numDevices == 0) {
+    return 0;
+  }
+
   for (int i=0;i<numDevices;i++) {
     std::cout << "\t" << USBSparkMax_GetDeviceName(handle, i) << std::endl;
   }
@@ -35,11 +39,9 @@ int main(int argc, char** argv) {
   std::cout << "Starting Robot... Press 'a' to stop" << std::endl;
 
   rev::CANSparkMax m_motor(6, rev::CANSparkMax::MotorType::kBrushless);
+  m_motor.Set(0.5);
 
-  while (1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    m_motor.Set(0.5);
-  }
+  std::cin.get();
 
   return 0;
 }

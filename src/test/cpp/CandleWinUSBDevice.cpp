@@ -37,12 +37,28 @@
 namespace rev {
 namespace usb {
 
+static void close_candle_dev(candle_handle hDev)
+{
+    candle_dev_close(hDev);
+    candle_dev_free(hDev);
+}
+
 CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
     m_thread(hDev)
 {
     m_handle = hDev;
-    candle_dev_open(hDev);
-    candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS);
+    if (candle_dev_open(hDev) == false) {
+        std::cout << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
+        close_candle_dev(hDev);
+        throw "Failed to open device!";
+    }
+
+    if (candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS) == false) {
+        std::cout << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
+        close_candle_dev(hDev);
+        throw "Failed to start device channel 0!";
+    }
+    
     m_descriptor = candle_dev_get_path(m_handle);
     m_thread.Start();
 }
@@ -51,8 +67,7 @@ CandleWinUSBDevice::~CandleWinUSBDevice()
 {
     m_thread.Stop();
     candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
-    candle_dev_close(m_handle);
-    candle_dev_free(m_handle);
+    close_candle_dev(m_handle);
 }
 
 std::string CandleWinUSBDevice::GetName() const
@@ -71,13 +86,13 @@ int CandleWinUSBDevice::GetId() const
     return 0;
 }
 
-CANStatus CandleWinUSBDevice::SendMessage(const CANMessage& msg, int periodMs)
+CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::RecieveMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
+CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp)
 {
     return CANStatus::kOk;
 }

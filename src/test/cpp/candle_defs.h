@@ -71,6 +71,7 @@ typedef struct {
     wchar_t path[256];
     candle_devstate_t state;
     candle_err_t last_error;
+	DWORD windows_last_error;
 
     HANDLE deviceHandle;
     WINUSB_INTERFACE_HANDLE winUSBHandle;

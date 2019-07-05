@@ -31,6 +31,7 @@
 
 #include <map>
 #include <iostream>
+#include <memory>
 
 #include "candle.h"
 
@@ -74,7 +75,7 @@ std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const 
                     std::wstring path(candle_dev_get_path(dev));
 
                     if (path == std::wstring(descriptor)) {
-                        return std::make_unique<CandleWinUSBDevice>(dev); 
+                        return std::make_unique<CandleWinUSBDevice>(dev);
                     }
                 }
             }

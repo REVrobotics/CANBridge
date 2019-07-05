@@ -34,7 +34,10 @@
 #include <queue>
 #include <map>
 #include <vector>
-#include <iostream> // TODO: remove me
+
+// TODO: remove me
+#include <clocale>
+#include <iostream>
 
 #include "CANMessage.h"
 
@@ -127,7 +130,7 @@ private:
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
 
-                    std::cout << "Recieved Message: " << msg << std::endl;
+                    std::cout << "Recieved Message: " << std::hex << msg << std::endl;
 
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
@@ -160,8 +163,11 @@ private:
                     frame.timestamp_us = now.time_since_epoch().count() / 1000;
                     if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
                         std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                        wchar_t tmp[512];
+                        candle_windows_error_text(candle_dev_last_windows_error(m_device), tmp, 512);
+                        std::wcout << L"Fail Code Windows: " << tmp << std::endl;
                     } else {
-                        std::cout << "Frame sent successfully" << std::endl;
+                        //std::cout << "Frame sent successfully" << std::endl;
                     }
                 }
 

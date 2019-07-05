@@ -78,7 +78,7 @@ void USBSparkMax_SendMessageCallback(const char* name, void* param,
 {
     for (auto& dev : CANDeviceList) {
         if (USBSparkMax_ProcessMask(dev.second, messageID)) {
-            auto stat = dev.first->SendMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
+            auto stat = dev.first->SendCANMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
             *status = USBSparkMax_StatusToHALError(stat);
         }
     }
@@ -104,7 +104,7 @@ void USBSparkMax_ReceiveMessageCallback(
     // 1) Recieve on all registered channels
     for (auto& dev : CANDeviceList) {
             struct USBSparkMax_CANRecieve msg;
-            auto stat = dev.first->RecieveMessage(msg.m_message, messageIDMask, msg.timestamp);
+            auto stat = dev.first->RecieveCANMessage(msg.m_message, messageIDMask, msg.timestamp);
 
         if (USBSparkMax_ProcessMask(dev.second, msg.m_message.GetMessageId(), messageIDMask)) {
             msg.status = USBSparkMax_StatusToHALError(stat);

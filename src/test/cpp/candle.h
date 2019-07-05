@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <windows.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,9 +100,10 @@ typedef enum {
 	CANDLE_ERR_SET_PIPE_RAW_IO = 29,
 	CANDLE_ERR_DEVICE_FEATURE_UNAVAILABLE = 30,
 	CANDLE_ERR_WRITE_WAIT = 31,
-	CANDLE_ERR_WRITE_TIMEOUT = 32,
-	CANDLE_ERR_WRITE_RESULT = 33,
-	CANDLE_ERR_WRITE_SIZE = 34,
+	CANDLE_ERR_WRITE_TIMEOUT_PRE = 32,
+	CANDLE_ERR_WRITE_TIMEOUT = 33,
+	CANDLE_ERR_WRITE_RESULT = 34,
+	CANDLE_ERR_WRITE_SIZE = 35,
 } candle_err_t;
 
 #pragma pack(push,1)
@@ -176,7 +179,9 @@ DLL uint8_t * __stdcall candle_frame_data(candle_frame_t *frame);
 DLL uint32_t __stdcall candle_frame_timestamp_us(candle_frame_t *frame);
 
 DLL candle_err_t __stdcall candle_dev_last_error(candle_handle hdev);
+DLL DWORD __stdcall candle_dev_last_windows_error(candle_handle hdev);
 DLL const char * __stdcall candle_error_text(candle_err_t errnum);
+DLL void __stdcall candle_windows_error_text(DWORD errnum, wchar_t* buffer, size_t buflen);
 
 // This is a convenience function to initialize a single device and start a channel on it
 DLL candle_err_t __stdcall candle_init_single_device(uint8_t device_num, uint8_t device_channel, uint32_t bitrate, candle_device_mode_flags_t device_mode_flags, candle_list_handle *plist, candle_handle *phdev);
