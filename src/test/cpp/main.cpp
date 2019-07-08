@@ -5,11 +5,17 @@
 #include <thread>
 
 #include "USBSparkMax.h"
+#include "MockDS.h"
 
 #include <rev/CANSparkMax.h>
 
 int main(int argc, char** argv) {
   HAL_Initialize(500, 0);
+
+  frc::MockDS ds;
+  ds.start();
+  HAL_ObserveUserProgramStarting();
+  ds.enable();
 
   std::cout << "Running Scan..." << std::endl;
 
@@ -38,7 +44,7 @@ int main(int argc, char** argv) {
 
   std::cout << "Starting Robot... Press 'a' to stop" << std::endl;
 
-  rev::CANSparkMax m_motor(6, rev::CANSparkMax::MotorType::kBrushless);
+  rev::CANSparkMax m_motor(61, rev::CANSparkMax::MotorType::kBrushed);
   m_motor.Set(0.5);
 
   std::cin.get();
