@@ -29,32 +29,21 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
-#include "CANMessage.h"
-#include "CANStatus.h"
+#include "rev/CANDevice.h"
 
 namespace rev {
 namespace usb {
 
-class CANDevice {
+class CANDriver {
 public:
-    CANDevice() {}
-    ~CANDevice() {}
+    CANDriver() {}
+    virtual ~CANDriver() {}
 
     virtual std::string GetName() const = 0;
-    virtual std::wstring GetDescriptor() const {return std::wstring();}
-
-    virtual int GetId() const = 0;
-
-    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) = 0;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) = 0;
-    virtual CANStatus OpenStreamSession() = 0;
-    virtual CANStatus CloseStreamSession() = 0;
-    virtual CANStatus ReadStreamSession() = 0;
-
-    virtual CANStatus GetCANStatus() = 0;
-
-    virtual bool IsConnected() = 0;
+    virtual std::vector<std::wstring> GetDevices() = 0;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) = 0;
 };
 
 } // namespace usb

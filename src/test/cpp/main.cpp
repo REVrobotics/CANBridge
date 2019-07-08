@@ -4,8 +4,8 @@
 #include <chrono>
 #include <thread>
 
-#include "USBSparkMax.h"
-#include "MockDS.h"
+#include "rev/RevUSB.h"
+#include "rev/MockDS.h"
 
 #include <rev/CANSparkMax.h>
 
@@ -19,11 +19,11 @@ int main(int argc, char** argv) {
 
   std::cout << "Running Scan..." << std::endl;
 
-  auto handle = USBSparkMax_Scan();
+  auto handle = RevUSB_Scan();
 
   std::cout << "Scan Complete" << std::endl;
 
-  int numDevices = USBSparkMax_NumDevices(handle);
+  int numDevices = RevUSB_NumDevices(handle);
 
   std::cout << "Found " << numDevices << " Devices: " << std::endl;
 
@@ -32,15 +32,15 @@ int main(int argc, char** argv) {
   }
 
   for (int i=0;i<numDevices;i++) {
-    std::cout << "\t" << USBSparkMax_GetDeviceName(handle, i) << std::endl;
+    std::cout << "\t" << RevUSB_GetDeviceName(handle, i) << std::endl;
   }
 
   if (numDevices == 1) {
     std::cout << "Registering single device to HAL" << std::endl;
-    USBSparkMax_RegisterDeviceToHAL(USBSparkMax_GetDeviceName(handle, 0), 0, 0);
+    RevUSB_RegisterDeviceToHAL(RevUSB_GetDeviceName(handle, 0), 0, 0);
   }
 
-  USBSparkMax_FreeScan(handle);
+  RevUSB_FreeScan(handle);
 
   std::cout << "Starting Robot... Press 'a' to stop" << std::endl;
 

@@ -39,7 +39,7 @@
 #include <clocale>
 #include <iostream>
 
-#include "CANMessage.h"
+#include "rev/CANMessage.h"
 
 #include "candle.h"
 
