@@ -1,13 +1,14 @@
 #include "rev/RevUSB.h"
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <iostream>
 #include <algorithm>
 
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
-#include "rev/Drivers/CandleWinUSBDriver.h"
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
 
 #include <mockdata/CanData.h>
 
@@ -35,7 +36,6 @@ static int32_t RevUSB_StatusToHALError(rev::usb::CANStatus status) {
 c_RevUSB_ScanHandle RevUSB_Scan()
 {
     c_RevUSB_ScanHandle handle = new struct RevUSB_Scan;
-    int i=0;
 
     for (auto& driver : CANDriverList) {
         for (auto d : driver->GetDevices()) {
@@ -51,7 +51,7 @@ int RevUSB_NumDevices(c_RevUSB_ScanHandle handle)
     return handle->devices.size();
 }
 
-const wchar_t* RevUSB_GetDeviceName(c_RevUSB_ScanHandle handle, int index)
+const wchar_t* RevUSB_GetDeviceName(c_RevUSB_ScanHandle handle, size_t index)
 {
     if (index >= handle->devices.size()) {
         return NULL;
@@ -176,19 +176,19 @@ static std::vector<int32_t> LocalCallbackStore;
 static void RevUSB_RegisterHAL()
 {
     if (LocalCallbackStore.size() == 0) {
+        /*
         LocalCallbackStore.push_back(HALSIM_RegisterCanSendMessageCallback(RevUSB_SendMessageCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanReceiveMessageCallback(RevUSB_ReceiveMessageCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanOpenStreamCallback(RevUSB_OpenStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanCloseStreamCallback(RevUSB_CloseStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanReadStreamCallback(RevUSB_ReadStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanGetCANStatusCallback(RevUSB_GetCANStatusCallback, NULL));
+        */
     }
 }
 
 void RevUSB_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask)
 {
-    c_RevUSB_ScanHandle handle = new struct RevUSB_Scan;
-    int i=0;
     RevUSB_RegisterHAL();
 
     for (auto& driver : CANDriverList) {

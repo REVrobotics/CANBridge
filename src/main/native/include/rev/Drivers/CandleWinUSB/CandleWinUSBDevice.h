@@ -31,9 +31,9 @@
 #include <map>
 #include <string>
 
-#include "candle.h"
+#include "candlelib/candle.h"
 
-#include "CandleWinUSBDeviceThread.h"
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDeviceThread.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"

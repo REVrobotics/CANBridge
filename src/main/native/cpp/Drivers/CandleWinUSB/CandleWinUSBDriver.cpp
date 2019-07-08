@@ -26,14 +26,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CandleWinUSBDriver.h"
-#include "CandleWinUSBDevice.h"
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
 
 #include <map>
 #include <iostream>
 #include <memory>
 
-#include "candle.h"
+#include "candlelib/candle.h"
 
 namespace rev {
 namespace usb {

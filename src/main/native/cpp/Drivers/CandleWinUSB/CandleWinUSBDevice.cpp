@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CandleWinUSBDevice.h"
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>

@@ -41,7 +41,7 @@
 
 #include "rev/CANMessage.h"
 
-#include "candle.h"
+#include "candlelib/candle.h"
 
 namespace rev {
 namespace usb {
@@ -102,6 +102,8 @@ public:
     bool RecieveMessage(CANMessage& msg);
 
 private:
+    candle_handle m_device;
+    
     std::atomic_bool m_threadComplete;
     std::thread m_thread;
     std::mutex m_sendMutex;
@@ -109,8 +111,6 @@ private:
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, std::queue<CANMessage>> m_recvStore;
-
-    candle_handle m_device;
 
     long long m_threadIntervalMs;
 
@@ -146,7 +146,7 @@ private:
             m_sendMutex.lock();
             size_t queueSize = m_sendQueue.size();
 
-            for (int i=0;i<queueSize;i++) {
+            for (size_t i=0;i<queueSize;i++) {
                 detail::CANThreadSendQueueElement el = m_sendQueue.front();
                 m_sendQueue.pop();
                 if (el.m_intervalMs == -1) {
@@ -163,9 +163,9 @@ private:
                     frame.timestamp_us = now.time_since_epoch().count() / 1000;
                     if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
                         std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
-                        wchar_t tmp[512];
-                        candle_windows_error_text(candle_dev_last_windows_error(m_device), tmp, 512);
-                        std::wcout << L"Fail Code Windows: " << tmp << std::endl;
+                        //wchar_t tmp[512];
+                        //candle_windows_error_text(candle_dev_last_windows_error(m_device), tmp, 512);
+                        //std::wcout << L"Fail Code Windows: " << tmp << std::endl;
                     } else {
                         //std::cout << "Frame sent successfully" << std::endl;
                     }

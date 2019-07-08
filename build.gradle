@@ -1,4 +1,5 @@
 plugins {
+  id 'c'
   id 'cpp'
   id 'java'
   id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '2.2'
@@ -57,11 +58,25 @@ model {
         }
       }
       binaries.all {
-        lib library: "candle_dll", linkage: 'static'
+        lib library: "candlelib", linkage: 'static'
       }
 
-      nativeUtils.useRequiredLibrary(it, "wpilib_shared")//, "candle_dll")
+      nativeUtils.useRequiredLibrary(it, "wpilib_shared")
     }
+    candlelib(NativeLibrarySpec) {
+      sources {
+        c {
+          source {
+            srcDirs 'src/candlelib/native/c/candlelib'
+            include '**/*.c'
+          }
+          exportedHeaders {
+            srcDirs 'src/candlelib/native/include/candlelib'
+          }
+        }
+      }
+    }
+    
   }
 }
 

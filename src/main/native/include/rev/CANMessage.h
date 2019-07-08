@@ -29,9 +29,10 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
 #include <iostream>
 
 namespace rev {
@@ -75,7 +76,7 @@ public:
     CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
     CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize, uint32_t timestampUs = 0) :
         m_size(dataSize), m_messageId(messageId), m_timestamp(timestampUs) {
-            memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
+            std::memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
     }
 
     ~CANMessage() = default;
@@ -87,7 +88,7 @@ public:
             return m_size;
         }
 
-        memcpy(buffer, (uint8_t*)&m_messageId, sizeof(m_messageId));
+        std::memcpy(buffer, (uint8_t*)&m_messageId, sizeof(m_messageId));
 
         totalLen -= sizeof(m_messageId);
         buffer += sizeof(m_messageId);
@@ -96,7 +97,7 @@ public:
             return m_size;
         }
 
-        memcpy(buffer, m_data, totalLen < 8 ? totalLen : 8);
+        std::memcpy(buffer, m_data, totalLen < 8 ? totalLen : 8);
         return m_size;
     }
 
