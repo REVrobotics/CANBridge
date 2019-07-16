@@ -144,12 +144,43 @@ typedef struct {
 
 #pragma pack(pop)
 
-#ifdef CANDLE_API_LIBRARY
-#define DLL __declspec(dllexport)
+#ifdef BUILDING_DLL
+	// Shared Lib
+	#ifdef CANDLE_EXPORT
+		// DLL Export
+		#if defined(_MSC_VER)
+			//  Microsoft 
+			#define DLL __declspec(dllexport)
+		#elif defined(__GNUC__)
+			//  GCC
+			#define DLL __attribute__((visibility("default")))
+			#define __stdcall
+		#else
+			//  do nothing and hope for the best?
+			#define DLL
+			#define __stdcall
+			//#pragma warning Unknown dynamic link import/export semantics.
+		#endif
+	#else
+		// DLL Import
+		#if defined(_MSC_VER)
+			//  Microsoft 
+			#define DLL __declspec(dllimport)
+		#elif defined(__GNUC__)
+			//  GCC
+			#define DLL __attribute__((visibility("default")))
+			#define __stdcall
+		#else
+			//  do nothing and hope for the best?
+			#define DLL
+			#define __stdcall
+			//#pragma warning Unknown dynamic link import/export semantics.
+		#endif
+	#endif
 #else
-//#define DLL __declspec(dllimport)
-#define DLL
-#define __stdcall
+	// Static Lib
+	#define DLL
+	#define __stdcall
 #endif
 
 DLL bool __stdcall candle_list_scan(candle_list_handle *list);

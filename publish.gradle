@@ -181,11 +181,13 @@ model {
             revAllTaskList = createAllCombined(revTaskList, ['RevUSB'], zipBaseName, Zip, project)
         }
 
-        def revDriverTaskList = createComponentZipTasks($.components, ['RevUSB'], driverZipBaseName, Zip, project, includeStandardZipFormat)
+        /*
+        def revDriverTaskList = createComponentZipTasks($.components, ['candlelib'], driverZipBaseName, Zip, project, includeStandardZipFormat)
         def revDriverAllTaskList
         if (!project.hasProperty('jenkinsBuild')) {
-            revDriverAllTaskList = createAllCombined(revDriverTaskList, ['RevUSB'], driverZipBaseName, Zip, project)
+            revDriverAllTaskList = createAllCombined(revDriverTaskList, ['candlelib'], driverZipBaseName, Zip, project)
         }
+        */
 
         publications {
             cpp(MavenPublication) {
