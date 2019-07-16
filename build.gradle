@@ -49,6 +49,9 @@ model {
       }
       binaries.all {
         lib library: "CandleLib", linkage: 'static'
+        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
+          it.buildable = false
+        }
       }
 
       nativeUtils.useRequiredLibrary(it, "wpilib_shared")
@@ -63,6 +66,11 @@ model {
           exportedHeaders {
             srcDirs 'src/main/native/include/candlelib'
           }
+        }
+      }
+      binaries.all {
+        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
+          it.buildable = false
         }
       }
     }

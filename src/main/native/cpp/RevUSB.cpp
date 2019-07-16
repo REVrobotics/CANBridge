@@ -15,6 +15,10 @@
 
 #include <mockdata/CanData.h>
 
+#ifdef __FRC_ROBORIO__
+#error Not designed for FRC RoboRIO Projects! Requires HALSIM. For roboRIO projects use CAN.
+#endif
+
 struct RevUSB_Scan {
     std::vector<std::wstring> devices;
 };
@@ -181,14 +185,12 @@ static std::vector<int32_t> LocalCallbackStore;
 static void RevUSB_RegisterHAL()
 {
     if (LocalCallbackStore.size() == 0) {
-        /*
         LocalCallbackStore.push_back(HALSIM_RegisterCanSendMessageCallback(RevUSB_SendMessageCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanReceiveMessageCallback(RevUSB_ReceiveMessageCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanOpenStreamCallback(RevUSB_OpenStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanCloseStreamCallback(RevUSB_CloseStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanReadStreamCallback(RevUSB_ReadStreamSessionCallback, NULL));
         LocalCallbackStore.push_back(HALSIM_RegisterCanGetCANStatusCallback(RevUSB_GetCANStatusCallback, NULL));
-        */
     }
 }
 
