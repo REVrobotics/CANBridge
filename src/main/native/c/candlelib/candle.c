@@ -19,6 +19,8 @@
 
 */
 
+#ifdef _WIN32
+
 #include "candle.h"
 #include <stdlib.h>
 
@@ -27,6 +29,12 @@
 #include "candle_defs.h"
 #include "candle_ctrl_req.h"
 #include "ch_9.h"
+
+#ifdef _MSC_VER
+#pragma comment(lib, "winusb.lib")
+#pragma comment(lib, "setupapi.lib")
+#pragma comment(lib, "ole32.lib")
+#endif
 
 static bool candle_read_di(HDEVINFO hdi, SP_DEVICE_INTERFACE_DATA interfaceData, candle_device_t *dev)
 {
@@ -50,6 +58,10 @@ static bool candle_read_di(HDEVINFO hdi, SP_DEVICE_INTERFACE_DATA interfaceData,
         return false;
     }
 
+	// TODO: Get rid of this
+	#pragma warning(push)
+	#pragma warning ( disable: 4133)
+
     bool retval = true;
     ULONG length = requiredLength;
     if (!SetupDiGetDeviceInterfaceDetail(hdi, &interfaceData, detail_data, length, &requiredLength, NULL) ) {
@@ -61,6 +73,9 @@ static bool candle_read_di(HDEVINFO hdi, SP_DEVICE_INTERFACE_DATA interfaceData,
 		dev->windows_last_error = GetLastError();
         retval = false;
     }
+
+	// TODO: Get rid of this
+	#pragma warning(pop)
 
     LocalFree(detail_data);
 
@@ -216,6 +231,10 @@ static bool candle_dev_internal_open(candle_handle hdev)
 
 	dev->device_mode_flags = 0;
 
+	// TODO: Get rid of this
+	#pragma warning(push)
+	#pragma warning ( disable: 4133)
+
 	dev->deviceHandle = CreateFile(
         dev->path,
         GENERIC_WRITE | GENERIC_READ,
@@ -225,6 +244,9 @@ static bool candle_dev_internal_open(candle_handle hdev)
         FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
         NULL
     );
+
+	// TODO: Get rid of this
+	#pragma warning(pop)
 
     if (dev->deviceHandle == INVALID_HANDLE_VALUE) {
         dev->last_error = CANDLE_ERR_CREATE_FILE;
@@ -915,3 +937,7 @@ done:
 		return rval;
 	}
 }
+
+#else
+typedef int __ISOWarning__CLEAR_;
+#endif // _WIN32

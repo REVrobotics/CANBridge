@@ -26,6 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef _WIN32
+
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
 
@@ -87,3 +89,7 @@ std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const 
 
 } // namespace usb
 } // namespace rev
+
+#else
+typedef int __ISOWarning__CLEAR_;
+#endif // _WIN32

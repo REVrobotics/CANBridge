@@ -19,8 +19,16 @@
 
 */
 
+#ifdef _WIN32
+
 #include "candle_ctrl_req.h"
 #include "ch_9.h"
+
+#ifdef _MSC_VER
+#pragma comment(lib, "winusb.lib")
+#pragma comment(lib, "setupapi.lib")
+#pragma comment(lib, "ole32.lib")
+#endif
 
 enum {
     CANDLE_BREQ_HOST_FORMAT = 0,
@@ -182,3 +190,7 @@ bool candle_ctrl_set_bittiming(candle_device_t *dev, uint8_t channel, candle_bit
     dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_SET_BITTIMING;
     return rc;
 }
+
+#else
+typedef int __ISOWarning__CLEAR_;
+#endif // _WIN32

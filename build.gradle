@@ -15,14 +15,6 @@ apply from: 'dependencies.gradle'
 nativeUtils {
   exportsConfigs {
       RevUSB {
-          x86ExcludeSymbols = ['_CT??_R0?AV_System_error', '_CT??_R0?AVexception', '_CT??_R0?AVfailure',
-                                '_CT??_R0?AVbad_cast',
-                                '_CT??_R0?AVruntime_error', '_CT??_R0?AVsystem_error', '_CTA5?AVfailure',
-                                '_TI5?AVfailure']
-          x64ExcludeSymbols = ['_CT??_R0?AV_System_error', '_CT??_R0?AVexception', '_CT??_R0?AVfailure',
-                                '_CT??_R0?AVbad_cast',
-                                '_CT??_R0?AVruntime_error', '_CT??_R0?AVsystem_error', '_CTA5?AVfailure',
-                                '_TI5?AVfailure']
       }
   }
   privateExportsConfigs {
@@ -65,11 +57,11 @@ model {
       sources {
         c {
           source {
-            srcDirs 'src/candlelib/native/c/candlelib'
+            srcDirs 'src/main/native/c/candlelib/'
             include '**/*.c'
           }
           exportedHeaders {
-            srcDirs 'src/candlelib/native/include/candlelib'
+            srcDirs 'src/main/native/include/candlelib'
           }
         }
       }

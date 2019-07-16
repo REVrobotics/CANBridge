@@ -8,7 +8,10 @@
 
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
+
+#ifdef _WIN32
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
+#endif
 
 #include <mockdata/CanData.h>
 
@@ -23,7 +26,9 @@ public:
 };
 
 static const std::vector<rev::usb::CANDriver*> CANDriverList = {
+#ifdef _WIN32
     new rev::usb::CandleWinUSBDriver()
+#endif
 };
 
 static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, RevUSB_CANFilter>> CANDeviceList = {};
