@@ -21,6 +21,9 @@
 
 #pragma once
 
+// Ignore windows library warnings
+#pragma warning(push, 0)
+
 #include <stdint.h>
 #include <windows.h>
 #include <winbase.h>
@@ -32,6 +35,8 @@
 #undef __CRT__NO_INLINE
 #include <strsafe.h>
 #define __CRT__NO_INLINE
+
+#pragma warning(pop)
 
 #include "candle.h"
 

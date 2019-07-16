@@ -26,36 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+package com.revrobotics.jni;
 
-#include <string>
+import java.io.IOException;
 
-#include "CANMessage.h"
-#include "CANStatus.h"
+import edu.wpi.first.wpiutil.RuntimeLoader;
 
-namespace rev {
-namespace usb {
+public class RevJNIWrapper  {
+  static boolean libraryLoaded = false;
+  static RuntimeLoader<RevJNIWrapper> loader = null;
 
-class CANDevice {
-public:
-    CANDevice() {}
-    ~CANDevice() {}
-
-    virtual std::string GetName() const = 0;
-    virtual std::wstring GetDescriptor() const {return std::wstring();}
-
-    virtual int GetId() const = 0;
-
-    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) = 0;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) = 0;
-    virtual CANStatus OpenStreamSession() = 0;
-    virtual CANStatus CloseStreamSession() = 0;
-    virtual CANStatus ReadStreamSession() = 0;
-
-    virtual CANStatus GetCANStatus() = 0;
-
-    virtual bool IsConnected() = 0;
-};
-
-} // namespace usb
-} // namespace rev
+  static {
+    if (!libraryLoaded) {
+      try {
+        loader = new RuntimeLoader<>("SparkMaxDriver", RuntimeLoader.getDefaultExtractionRoot(), RevJNIWrapper.class);
+        loader.loadLibrary();
+      } catch (IOException ex) {
+        ex.printStackTrace();
+        System.exit(1);
+      }
+      libraryLoaded = true;
+    }
+  }
+}

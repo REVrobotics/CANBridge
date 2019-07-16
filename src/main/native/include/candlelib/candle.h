@@ -23,7 +23,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef USING_WINDOWS_ERR_DECODE
 #include <windows.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -142,11 +144,9 @@ typedef struct {
 
 #pragma pack(pop)
 
-#ifdef CANDLE_API_LIBRARY
-#define DLL __declspec(dllexport)
-#else
-#define DLL __declspec(dllimport)
-#endif
+// Static Lib
+#define DLL
+#define __stdcall
 
 DLL bool __stdcall candle_list_scan(candle_list_handle *list);
 DLL bool __stdcall candle_list_free(candle_list_handle list);
@@ -179,9 +179,14 @@ DLL uint8_t * __stdcall candle_frame_data(candle_frame_t *frame);
 DLL uint32_t __stdcall candle_frame_timestamp_us(candle_frame_t *frame);
 
 DLL candle_err_t __stdcall candle_dev_last_error(candle_handle hdev);
-DLL DWORD __stdcall candle_dev_last_windows_error(candle_handle hdev);
 DLL const char * __stdcall candle_error_text(candle_err_t errnum);
+#ifdef USING_WINDOWS_ERR_DECODE
+DLL DWORD __stdcall candle_dev_last_windows_error(candle_handle hdev);
 DLL void __stdcall candle_windows_error_text(DWORD errnum, wchar_t* buffer, size_t buflen);
+#else
+#define DWORD int
+//int GetLastError() {return 0;}
+#endif
 
 // This is a convenience function to initialize a single device and start a channel on it
 DLL candle_err_t __stdcall candle_init_single_device(uint8_t device_num, uint8_t device_channel, uint32_t bitrate, candle_device_mode_flags_t device_mode_flags, candle_list_handle *plist, candle_handle *phdev);

@@ -29,9 +29,10 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <vector>
 
-#include "CANDevice.h"
+#include "rev/CANDevice.h"
 
 namespace rev {
 namespace usb {

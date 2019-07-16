@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 REV Robotics
+ * Copyright (c) 2018 - 2019 REV Robotics
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -25,27 +25,3 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#pragma once
-
-#include <map>
-#include <string>
-
-#include "CANDriver.h"
-
-namespace rev {
-namespace usb {
-
-class CandleWinUSBDriver : public CANDriver {
-public:
-    CandleWinUSBDriver() {}
-    ~CandleWinUSBDriver() {}
-
-    virtual std::string GetName() const {return "Candle WINUSB";}
-
-    virtual std::vector<std::wstring> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
-};
-
-} // namespace usb
-} // namespace rev

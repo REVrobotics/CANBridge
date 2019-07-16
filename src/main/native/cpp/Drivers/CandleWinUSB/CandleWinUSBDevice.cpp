@@ -26,7 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CandleWinUSBDevice.h"
+#ifdef _WIN32
+
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -123,3 +125,7 @@ bool CandleWinUSBDevice::IsConnected()
 
 } // namespace usb
 } // namespace rev
+
+#else
+typedef int __ISOWarning__CLEAR_;
+#endif // _WIN32

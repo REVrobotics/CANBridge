@@ -31,40 +31,20 @@
 #include <map>
 #include <string>
 
-#include "candle.h"
-
-#include "CandleWinUSBDeviceThread.h"
-#include "CANDevice.h"
-#include "CANMessage.h"
-#include "CANStatus.h"
+#include "rev/CANDriver.h"
 
 namespace rev {
 namespace usb {
 
-class CandleWinUSBDevice : public CANDevice {
+class CandleWinUSBDriver : public CANDriver {
 public:
-    CandleWinUSBDevice() =delete;
-    CandleWinUSBDevice(candle_handle hDev);
-    ~CandleWinUSBDevice();
+    CandleWinUSBDriver() {}
+    ~CandleWinUSBDriver() {}
 
-    virtual std::string GetName() const;
-    virtual std::wstring GetDescriptor() const;
+    virtual std::string GetName() const {return "Candle WINUSB";}
 
-    virtual int GetId() const;
-
-    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) override;
-    virtual CANStatus OpenStreamSession();
-    virtual CANStatus CloseStreamSession();
-    virtual CANStatus ReadStreamSession();
-
-    virtual CANStatus GetCANStatus();
-
-    virtual bool IsConnected();
-private:
-    candle_handle m_handle;
-    CandleWinUSBDeviceThread m_thread;
-    std::wstring m_descriptor;
+    virtual std::vector<std::wstring> GetDevices();
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
 };
 
 } // namespace usb

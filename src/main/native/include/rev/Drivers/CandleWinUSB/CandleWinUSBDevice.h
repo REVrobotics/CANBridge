@@ -26,64 +26,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CandleWinUSBDriver.h"
-#include "CandleWinUSBDevice.h"
+#pragma once
 
 #include <map>
-#include <iostream>
-#include <memory>
+#include <string>
 
-#include "candle.h"
+#include "candlelib/candle.h"
+
+#include "rev/Drivers/CandleWinUSB/CandleWinUSBDeviceThread.h"
+#include "rev/CANDevice.h"
+#include "rev/CANMessage.h"
+#include "rev/CANStatus.h"
 
 namespace rev {
 namespace usb {
 
-std::vector<std::wstring> CandleWinUSBDriver::GetDevices()
-{
-    // Search driver layer for devices
-    candle_list_handle clist;
-    uint8_t num_interfaces;
-    candle_handle dev;
-    std::vector<std::wstring> retval;
+class CandleWinUSBDevice : public CANDevice {
+public:
+    CandleWinUSBDevice() =delete;
+    CandleWinUSBDevice(candle_handle hDev);
+    ~CandleWinUSBDevice();
 
-    if (candle_list_scan(&clist)) {
-        if (candle_list_length(clist, &num_interfaces)) {
-            for (uint8_t i=0; i<num_interfaces; i++) {
-                if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring path(candle_dev_get_path(dev));
-                    retval.push_back(path);
-                }
-            }
-        }
-        candle_list_free(clist);
-    }
+    virtual std::string GetName() const;
+    virtual std::wstring GetDescriptor() const;
 
-    return retval;
-}
+    virtual int GetId() const;
 
-std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
-{
-    // Search driver layer for devices
-    candle_list_handle clist;
-    uint8_t num_interfaces;
-    candle_handle dev;
+    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
+    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) override;
+    virtual CANStatus OpenStreamSession();
+    virtual CANStatus CloseStreamSession();
+    virtual CANStatus ReadStreamSession();
 
-    if (candle_list_scan(&clist)) {
-        if (candle_list_length(clist, &num_interfaces)) {
-            for (uint8_t i=0; i<num_interfaces; i++) {
-                if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring path(candle_dev_get_path(dev));
+    virtual CANStatus GetCANStatus();
 
-                    if (path == std::wstring(descriptor)) {
-                        return std::make_unique<CandleWinUSBDevice>(dev);
-                    }
-                }
-            }
-        }
-        candle_list_free(clist);
-    }
-    return std::unique_ptr<CANDevice>();
-}
+    virtual bool IsConnected();
+private:
+    candle_handle m_handle;
+    CandleWinUSBDeviceThread m_thread;
+    std::wstring m_descriptor;
+};
 
 } // namespace usb
 } // namespace rev
