@@ -24,16 +24,12 @@ nativeUtils {
                                 '_CT??_R0?AVruntime_error', '_CT??_R0?AVsystem_error', '_CTA5?AVfailure',
                                 '_TI5?AVfailure']
       }
-      CandleLib {
-      }
   }
-  /*
   privateExportsConfigs {
-    SparkMaxDriver {
-      exportsFile = project.file("src/main/driver/symbols.txt")
+    CandleLib {
+      exportsFile = project.file("src/main/native/c/candlelib/symbols.txt")
     }
   }
-  */
 }
 
 model {
