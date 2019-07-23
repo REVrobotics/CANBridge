@@ -32,12 +32,12 @@ int main(int argc, char** argv) {
   }
 
   for (int i=0;i<numDevices;i++) {
-    std::cout << "\t" << RevUSB_GetDeviceName(handle, i) << std::endl;
+    std::cout << "\t" << RevUSB_GetDeviceName(handle, i) << " - " << RevUSB_GetDeviceDescriptor(handle, i) << std::endl;
   }
 
   if (numDevices == 1) {
     std::cout << "Registering single device to HAL" << std::endl;
-    RevUSB_RegisterDeviceToHAL(RevUSB_GetDeviceName(handle, 0), 0, 0);
+    RevUSB_RegisterDeviceToHAL(RevUSB_GetDeviceDescriptor(handle, 0), 0, 0);
   }
 
   RevUSB_FreeScan(handle);

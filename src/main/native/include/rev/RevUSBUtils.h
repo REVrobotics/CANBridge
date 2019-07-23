@@ -28,24 +28,10 @@
 
 #pragma once
 
-#include <map>
 #include <string>
-
-#include "rev/CANDriver.h"
 
 namespace rev {
 namespace usb {
-
-class CandleWinUSBDriver : public CANDriver {
-public:
-    CandleWinUSBDriver() {}
-    ~CandleWinUSBDriver() {}
-
-    virtual std::string GetName() const {return "Candle WINUSB";}
-
-    virtual std::vector<CANDeviceDetail> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
-};
-
-} // namespace usb
-} // namespace rev
+    void convert_wstring_to_string(const std::wstring& in, std::string& out);    
+}
+}

@@ -1,7 +1,7 @@
 {
     "fileName": "RevUSB.json",
     "name": "RevUSB",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "uuid": "34b37c7c-8acc-405f-9631-d21f20dc59d8",
     "mavenUrls": [
         "http://www.revrobotics.com/content/sw/max/sdk/maven/"
@@ -11,14 +11,14 @@
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "RevUSB-java",
-            "version": "0.1.0"
+            "version": "0.1.1"
         }
     ],
     "jniDependencies": [
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "RevUSB-jni",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "skipInvalidPlatforms": true,
             "isJar": false,
             "validPlatforms": []
@@ -28,7 +28,7 @@
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "RevUSB-cpp",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "libName": "RevUSB",
             "headerClassifier": "headers",
             "sharedLibrary": true,

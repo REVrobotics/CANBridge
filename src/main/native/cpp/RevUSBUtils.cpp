@@ -26,26 +26,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <rev/RevUSBUtils.h>
 
-#include <map>
-#include <string>
-
-#include "rev/CANDriver.h"
+#include <locale>
+#include <codecvt>
+#include <iostream>
 
 namespace rev {
 namespace usb {
 
-class CandleWinUSBDriver : public CANDriver {
-public:
-    CandleWinUSBDriver() {}
-    ~CandleWinUSBDriver() {}
+void convert_wstring_to_string(const std::wstring& in, std::string& out)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    out = converter.to_bytes(in.c_str());
+}
 
-    virtual std::string GetName() const {return "Candle WINUSB";}
-
-    virtual std::vector<CANDeviceDetail> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
-};
-
-} // namespace usb
-} // namespace rev
+}
+}

@@ -54,6 +54,13 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "candle_ctrl_req.h": "c",
-        "ch_9.h": "c"
+        "ch_9.h": "c",
+        "codecvt": "cpp",
+        "ctime": "cpp",
+        "locale": "cpp",
+        "xlocbuf": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xloctime": "cpp"
     }
 }

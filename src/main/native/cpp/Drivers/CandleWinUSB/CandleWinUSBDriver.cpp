@@ -36,24 +36,26 @@
 #include <memory>
 
 #include "candlelib/candle.h"
+#include "rev/RevUSBUtils.h"
 
 namespace rev {
 namespace usb {
 
-std::vector<std::wstring> CandleWinUSBDriver::GetDevices()
+std::vector<CANDeviceDetail> CandleWinUSBDriver::GetDevices()
 {
     // Search driver layer for devices
     candle_list_handle clist;
     uint8_t num_interfaces;
     candle_handle dev;
-    std::vector<std::wstring> retval;
+    std::vector<CANDeviceDetail> retval;
 
     if (candle_list_scan(&clist)) {
         if (candle_list_length(clist, &num_interfaces)) {
             for (uint8_t i=0; i<num_interfaces; i++) {
                 if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring path(candle_dev_get_path(dev));
-                    retval.push_back(path);
+                    std::wstring wpath(candle_dev_get_path(dev));
+                    std::string name(candle_dev_get_name(dev));
+                    retval.push_back({wpath, name, this->GetName()});
                 }
             }
         }

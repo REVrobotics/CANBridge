@@ -74,6 +74,7 @@ typedef struct {
 
 typedef struct {
     wchar_t path[256];
+    char name[256];
     candle_devstate_t state;
     candle_err_t last_error;
 	DWORD windows_last_error;

@@ -155,6 +155,7 @@ DLL bool __stdcall candle_list_length(candle_list_handle list, uint8_t *len);
 DLL bool __stdcall candle_dev_get(candle_list_handle list, uint8_t dev_num, candle_handle *hdev);
 DLL bool __stdcall candle_dev_get_state(candle_handle hdev, candle_devstate_t *state);
 DLL wchar_t * __stdcall candle_dev_get_path(candle_handle hdev);
+DLL char * __stdcall candle_dev_get_name(candle_handle hdev);
 DLL bool __stdcall candle_dev_open(candle_handle hdev);
 DLL bool __stdcall candle_dev_get_timestamp_us(candle_handle hdev, uint32_t *timestamp_us);
 DLL bool __stdcall candle_dev_close(candle_handle hdev);

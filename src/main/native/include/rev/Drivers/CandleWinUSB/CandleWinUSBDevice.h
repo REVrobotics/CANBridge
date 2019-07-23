@@ -65,6 +65,7 @@ private:
     candle_handle m_handle;
     CandleWinUSBDeviceThread m_thread;
     std::wstring m_descriptor;
+    std::string m_name;
 };
 
 } // namespace usb

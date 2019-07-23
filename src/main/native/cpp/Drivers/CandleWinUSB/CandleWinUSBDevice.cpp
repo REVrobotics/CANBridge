@@ -29,6 +29,7 @@
 #ifdef _WIN32
 
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+#include "rev/RevUSBUtils.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -62,6 +63,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
     }
     
     m_descriptor = candle_dev_get_path(m_handle);
+    m_name = candle_dev_get_name(m_handle);
     m_thread.Start();
 }
 
@@ -74,7 +76,7 @@ CandleWinUSBDevice::~CandleWinUSBDevice()
 
 std::string CandleWinUSBDevice::GetName() const
 {
-    return "SPARK MAX";
+    return m_name;
 }
 
 
