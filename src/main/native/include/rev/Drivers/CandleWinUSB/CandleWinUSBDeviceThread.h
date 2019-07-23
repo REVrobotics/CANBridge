@@ -77,17 +77,17 @@ public:
     }
 
     void Start() {
-        std::cout << "Starting Thread..." << std::endl;
+        //std::cout << "Starting Thread..." << std::endl;
         m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
 
     void Stop() {
-        std::cout << "Stopping Thread..." << std::endl;
+        //std::cout << "Stopping Thread..." << std::endl;
         m_threadComplete = true;
         if (m_thread.joinable()) {
             m_thread.join();
         }
-        std::cout << "Thread Stopped." << std::endl;
+        //std::cout << "Thread Stopped." << std::endl;
     }
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
@@ -115,7 +115,7 @@ private:
     long long m_threadIntervalMs;
 
     void run() {
-        std::cout << "Thread starting!" << std::endl;
+        //std::cout << "Thread starting!" << std::endl;
 
         while (m_threadComplete == false) {
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
@@ -130,7 +130,7 @@ private:
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
 
-                    std::cout << "Recieved Message: " << std::hex << msg << std::endl;
+                    //std::cout << "Recieved Message: " << std::hex << msg << std::endl;
 
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
@@ -161,8 +161,10 @@ private:
                     frame.can_id = el.m_msg.GetMessageId();
                     memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
                     frame.timestamp_us = now.time_since_epoch().count() / 1000;
+
+                    // TODO: Feed back an error
                     if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                        std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                        //std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                         //wchar_t tmp[512];
                         //candle_windows_error_text(candle_dev_last_windows_error(m_device), tmp, 512);
                         //std::wcout << L"Fail Code Windows: " << tmp << std::endl;
@@ -183,7 +185,7 @@ private:
             // 3) Stall thread
             std::this_thread::sleep_until(sleepTime);
         }
-        std::cout << "Thread Killed!" << std::endl;
+        //std::cout << "Thread Killed!" << std::endl;
     }
 }; 
 
