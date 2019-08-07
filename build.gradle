@@ -14,7 +14,7 @@ apply from: 'dependencies.gradle'
 
 nativeUtils {
   exportsConfigs {
-      RevUSB {
+      CANBridge {
       }
   }
   privateExportsConfigs {
@@ -35,7 +35,7 @@ model {
   //    }
   //}
   components {
-    RevUSB(NativeLibrarySpec) {
+    CANBridge(NativeLibrarySpec) {
       sources {
         cpp {
           source {

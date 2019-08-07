@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include "rev/RevUSB.h"
+#include "rev/CANBridge.h"
 #include "rev/MockDS.h"
 
 #include <rev/CANSparkMax.h>
@@ -19,11 +19,11 @@ int main(int argc, char** argv) {
 
   std::cout << "Running Scan..." << std::endl;
 
-  auto handle = RevUSB_Scan();
+  auto handle = CANBridge_Scan();
 
   std::cout << "Scan Complete" << std::endl;
 
-  int numDevices = RevUSB_NumDevices(handle);
+  int numDevices = CANBridge_NumDevices(handle);
 
   std::cout << "Found " << numDevices << " Devices: " << std::endl;
 
@@ -32,15 +32,15 @@ int main(int argc, char** argv) {
   }
 
   for (int i=0;i<numDevices;i++) {
-    std::cout << "\t" << RevUSB_GetDeviceName(handle, i) << " - " << RevUSB_GetDeviceDescriptor(handle, i) << std::endl;
+    std::cout << "\t" << CANBridge_GetDeviceName(handle, i) << " - " << CANBridge_GetDeviceDescriptor(handle, i) << std::endl;
   }
 
   if (numDevices == 1) {
     std::cout << "Registering single device to HAL" << std::endl;
-    RevUSB_RegisterDeviceToHAL(RevUSB_GetDeviceDescriptor(handle, 0), 0, 0);
+    CANBridge_RegisterDeviceToHAL(CANBridge_GetDeviceDescriptor(handle, 0), 0, 0);
   }
 
-  RevUSB_FreeScan(handle);
+  CANBridge_FreeScan(handle);
 
   std::cout << "Starting Robot... Press 'a' to stop" << std::endl;
 

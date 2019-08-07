@@ -26,20 +26,50 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <rev/RevUSBUtils.h>
+#pragma once
 
-#include <locale>
-#include <codecvt>
-#include <iostream>
+#include <stdint.h>
+#include <stddef.h>
 
-namespace rev {
-namespace usb {
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void convert_wstring_to_string(const std::wstring& in, std::string& out)
-{
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    out = converter.to_bytes(in.c_str());
-}
+typedef struct CANBridge_Scan* c_CANBridge_ScanHandle;
 
-}
-}
+/**
+ * Scan for any available REV USB compatible devices. 
+ * The scan results include only directly connected devices
+ * and not detect devices on the rest of the CAN network. 
+ * 
+ * @return Handle to CANBridge Scan Data 
+ */
+c_CANBridge_ScanHandle CANBridge_Scan();
+
+/**
+ * Returns the number of devices discovered by scan
+ * 
+ * @param previously opened c_CANBridge_ScanHandle
+ * 
+ * @return number of devices detected
+ */
+int CANBridge_NumDevices(c_CANBridge_ScanHandle handle);
+
+/**
+ * Get the device descriptor used to register the device
+ * to the WPILib HAL
+ * 
+ * @param inverted The phase of the encoder
+ * 
+ * @return CANError.kOK if successful
+ */
+const wchar_t* CANBridge_GetDeviceDescriptor(c_CANBridge_ScanHandle handle, size_t index);
+const char* CANBridge_GetDeviceName(c_CANBridge_ScanHandle handle, size_t index);
+const char* CANBridge_GetDriverName(c_CANBridge_ScanHandle handle, size_t index);
+void CANBridge_FreeScan(c_CANBridge_ScanHandle);
+
+void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

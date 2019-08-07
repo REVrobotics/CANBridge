@@ -26,27 +26,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <rev/CANBridgeUtils.h>
 
-#include <stdint.h>
-#include <stddef.h>
+#include <locale>
+#include <codecvt>
+#include <iostream>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace rev {
+namespace usb {
 
-typedef struct RevUSB_Scan* c_RevUSB_ScanHandle;
+void convert_wstring_to_string(const std::wstring& in, std::string& out)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    out = converter.to_bytes(in.c_str());
+}
 
-//List available SPARK MAX devices
-c_RevUSB_ScanHandle RevUSB_Scan();
-int RevUSB_NumDevices(c_RevUSB_ScanHandle handle);
-const wchar_t* RevUSB_GetDeviceDescriptor(c_RevUSB_ScanHandle handle, size_t index);
-const char* RevUSB_GetDeviceName(c_RevUSB_ScanHandle handle, size_t index);
-const char* RevUSB_GetDriverName(c_RevUSB_ScanHandle handle, size_t index);
-void RevUSB_FreeScan(c_RevUSB_ScanHandle);
-
-void RevUSB_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+}
+}

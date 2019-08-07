@@ -2,7 +2,7 @@
 
 ## Overview
 
-This respository is for the SPARK MAX software that is run on the NI roboRIO. 
+This respository is for the CANBridge software that is run on non-roboRIO platforms. 
 
 ## Build Requirements
 

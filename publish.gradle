@@ -49,7 +49,7 @@ ext.addTaskToCopyAllOutputs = { task ->
 }
 
 def artifactGroupId = 'com.revrobotics.usb'
-def baseArtifactId = 'RevUSB'
+def baseArtifactId = 'CANBridge'
 def driverZipBaseName = "_GROUP_com_revrobotics_usb_ID_${baseArtifactId}-driver_CLS"
 def zipBaseName = "_GROUP_com_revrobotics_usb_ID_${baseArtifactId}-cpp_CLS"
 def javaBaseName = "_GROUP_com_revrobotics_usb_ID_${baseArtifactId}-java_CLS"
@@ -175,10 +175,10 @@ tasks.matching {it != cleanReleaseRepo}.all {it.dependsOn cleanReleaseRepo}
 
 model {
     publishing {
-        def revTaskList = createComponentZipTasks($.components, ['RevUSB'], zipBaseName, Zip, project, includeStandardZipFormat)
+        def revTaskList = createComponentZipTasks($.components, ['CANBridge'], zipBaseName, Zip, project, includeStandardZipFormat)
         def revAllTaskList
         if (!project.hasProperty('jenkinsBuild')) {
-            revAllTaskList = createAllCombined(revTaskList, ['RevUSB'], zipBaseName, Zip, project)
+            revAllTaskList = createAllCombined(revTaskList, ['CANBridge'], zipBaseName, Zip, project)
         }
 
         /*
