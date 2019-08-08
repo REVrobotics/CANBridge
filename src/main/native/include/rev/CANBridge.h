@@ -59,15 +59,57 @@ int CANBridge_NumDevices(c_CANBridge_ScanHandle handle);
  * Get the device descriptor used to register the device
  * to the WPILib HAL
  * 
- * @param inverted The phase of the encoder
+ * @param index of the device in the scan
  * 
- * @return CANError.kOK if successful
+ * @return wchar_t pointer to  descriptor value. This becomes invalid after
+ * a call to CANBridge_FreeScan()
  */
 const wchar_t* CANBridge_GetDeviceDescriptor(c_CANBridge_ScanHandle handle, size_t index);
-const char* CANBridge_GetDeviceName(c_CANBridge_ScanHandle handle, size_t index);
-const char* CANBridge_GetDriverName(c_CANBridge_ScanHandle handle, size_t index);
-void CANBridge_FreeScan(c_CANBridge_ScanHandle);
 
+/**
+ * Get the device name
+ * 
+ * @param index of the device in the scan
+ * 
+ * @return pointer to device name. This becomes invalid after
+ * a call to CANBridge_FreeScan()
+ */
+const char* CANBridge_GetDeviceName(c_CANBridge_ScanHandle handle, size_t index);
+
+/**
+ * Get the driver name
+ * 
+ * @param index of the device in the scan
+ * 
+ * @return pointer to driver name. This becomes invalid after
+ * a call to CANBridge_FreeScan()
+ */
+const char* CANBridge_GetDriverName(c_CANBridge_ScanHandle handle, size_t index);
+
+/**
+ * Free the memory allocated by CANBridge_Scan()
+ * 
+ * @param handle of allocated scan
+ * 
+ */
+void CANBridge_FreeScan(c_CANBridge_ScanHandle handle);
+
+/**
+ * Register the device with the WPILib HAL for any incoming or
+ * outgoing CAN traffic that passes the filter created from the
+ * message ID and mask.
+ * 
+ * Call this before calling CANBridge_FreeScan()
+ * 
+ * @param descriptor The device descriptor returned by 
+ * CANBridge_GetDeviceDescriptor().
+ * 
+ * @param messageId the ID to match for this device
+ * 
+ * @param messageMask the bits of the messageId that must match
+ * to be handled by this device. Pass 0 to match all messages.
+ * 
+ */
 void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask);
 
 #ifdef __cplusplus
