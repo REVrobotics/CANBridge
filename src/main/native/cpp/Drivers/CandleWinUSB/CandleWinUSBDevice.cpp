@@ -29,7 +29,7 @@
 #ifdef _WIN32
 
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
-#include "rev/RevUSBUtils.h"
+#include "rev/CANBridgeUtils.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
