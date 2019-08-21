@@ -37,6 +37,7 @@ extern "C" {
 
 typedef struct CANBridge_Scan* c_CANBridge_ScanHandle;
 
+
 /**
  * Scan for any available REV USB compatible devices. 
  * The scan results include only directly connected devices
@@ -111,6 +112,20 @@ void CANBridge_FreeScan(c_CANBridge_ScanHandle handle);
  * 
  */
 void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask);
+
+/**
+ * Unregister the device from the WPILib HAL.
+ * 
+ * Call this after scanning the device for other devices connected to
+ * the CAN bus.
+ * 
+ * @param descriptor The device descriptor returned by 
+ * CANBridge_GetDeviceDescriptor().
+ * 
+ * @param messageId the ID to match for this device
+ * 
+ */
+void CANBridge_UnregisterDeviceFromHAL(const wchar_t* descriptor);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -144,6 +144,8 @@ public:
         return os << "Message Id: " << m.GetMessageId() << " Size: " << m.GetSize() << " Data: " << std::hex << m.GetData();
     }
 
+   
+
 private:
     uint8_t m_data[8];
     uint8_t m_size;

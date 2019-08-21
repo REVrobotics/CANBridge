@@ -30,8 +30,32 @@
 
 #include <string>
 
+#include "rev/CANBridge.h"
+#include "rev/CANMessage.h"
+
 namespace rev {
 namespace usb {
-    void convert_wstring_to_string(const std::wstring& in, std::string& out);    
-}
-}
+    class CANBridge_CANFilter {
+        public:
+        uint32_t messageId;
+        uint32_t messageMask;
+
+        friend bool operator<(const CANBridge_CANFilter& lhs, const CANBridge_CANFilter& rhs) {
+            return lhs.messageId < rhs.messageId && lhs.messageMask < rhs.messageMask;
+        }
+    };
+
+    void convert_wstring_to_string(const std::wstring& in, std::string& out); 
+
+    static bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask = 0) 
+    {
+        return (filter.messageId & mask) == (filter.messageMask & id);
+    }
+
+    static bool CANMessageCompare(CANMessage a, CANMessage b) 
+    {
+        return a.GetTimestampUs() < b.GetTimestampUs();
+    }
+
+} // namespace rev
+} // namespace usb

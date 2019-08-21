@@ -36,12 +36,15 @@
 
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
+#include "rev/CANMessage.h"
+#include "rev/CANBridgeUtils.h"
 
 #ifdef _WIN32
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
 #endif
 
 #include <mockdata/CanData.h>
+#include <hal/CAN.h>
 
 #ifdef __FRC_ROBORIO__
 #error Not designed for FRC RoboRIO Projects! Requires HALSIM. For roboRIO projects use CAN.
@@ -51,11 +54,6 @@ struct CANBridge_Scan {
     std::vector<rev::usb::CANDeviceDetail> devices;
 };
 
-class CANBridge_CANFilter {
-public:
-    uint32_t messageId;
-    uint32_t messageMask;
-};
 
 static const std::vector<rev::usb::CANDriver*> CANDriverList = {
 #ifdef _WIN32
@@ -63,7 +61,7 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
 #endif
 };
 
-static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, CANBridge_CANFilter>> CANDeviceList = {};
+static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>> CANDeviceList = {};
 
 static int32_t CANBridge_StatusToHALError(rev::usb::CANStatus status) {
     // TODO: Map these to the actual HAL error codes
@@ -121,10 +119,6 @@ void CANBridge_FreeScan(c_CANBridge_ScanHandle handle)
     delete handle;
 }
 
-static bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask = 0) 
-{
-    return true;
-}
 
 void CANBridge_SendMessageCallback(const char* name, void* param,
                                             uint32_t messageID,
@@ -133,7 +127,7 @@ void CANBridge_SendMessageCallback(const char* name, void* param,
                                             int32_t* status)
 {
     for (auto& dev : CANDeviceList) {
-        if (CANBridge_ProcessMask(dev.second, messageID)) {
+        if (rev::usb::CANBridge_ProcessMask(dev.second, messageID)) {
             auto stat = dev.first->SendCANMessage(rev::usb::CANMessage(messageID, data, dataSize), periodMs);
             *status = CANBridge_StatusToHALError(stat);
         }
@@ -142,13 +136,12 @@ void CANBridge_SendMessageCallback(const char* name, void* param,
 
 struct CANBridge_CANRecieve {
     rev::usb::CANMessage m_message;
-    uint32_t timestamp;
     int32_t status;
 };
 
 static bool CANRecieveCompare(struct CANBridge_CANRecieve a, struct CANBridge_CANRecieve b)
 {   
-    return a.timestamp < b.timestamp;
+    return rev::usb::CANMessageCompare(a.m_message, b.m_message);
 } 
 
 void CANBridge_ReceiveMessageCallback(
@@ -160,9 +153,9 @@ void CANBridge_ReceiveMessageCallback(
     // 1) Recieve on all registered channels
     for (auto& dev : CANDeviceList) {
             struct CANBridge_CANRecieve msg;
-            auto stat = dev.first->RecieveCANMessage(msg.m_message, messageIDMask, msg.timestamp);
+            auto stat = dev.first->RecieveCANMessage(msg.m_message, messageIDMask);
 
-        if (CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId(), messageIDMask)) {
+        if (rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId(), messageIDMask)) {
             msg.status = CANBridge_StatusToHALError(stat);
             recieves.push_back(msg);
         }
@@ -179,7 +172,7 @@ void CANBridge_ReceiveMessageCallback(
 
     for (auto& recv : recieves) {
         if (recv.status == 0) {
-            *timeStamp = recv.timestamp;
+            *timeStamp = recv.m_message.GetTimestampUs();
             *status = recv.status;
             *messageID = recv.m_message.GetMessageId();
             *dataSize = recv.m_message.GetSize();
@@ -197,25 +190,39 @@ void CANBridge_ReceiveMessageCallback(
     *status = recieves[0].status;
 }
 
+/**
+ * This needs to call the CandleWinUSBDevice.OpenStreamSession and register
+ * a stream with the correct size buffer.
+ */
 void CANBridge_OpenStreamSessionCallback(
     const char* name, void* param, uint32_t* sessionHandle, uint32_t messageID,
     uint32_t messageIDMask, uint32_t maxMessages, int32_t* status)
 {
-    
+    for (auto& dev : CANDeviceList) {
+        auto stat = dev.first->OpenStreamSession(sessionHandle, {messageID, messageIDMask}, maxMessages);
+    }
 }
 
-void CANBridge_CloseStreamSessionCallback(const char* name,
-                                                   void* param,
-                                                   uint32_t sessionHandle)
+void CANBridge_CloseStreamSessionCallback(const char* name, void* param, uint32_t sessionHandle)
 {
-    
+    for (auto& dev : CANDeviceList) {        
+        auto stat = dev.first->CloseStreamSession(sessionHandle);
+        
+    } 
 }
+
 
 void CANBridge_ReadStreamSessionCallback(
     const char* name, void* param, uint32_t sessionHandle,
     struct HAL_CANStreamMessage* messages, uint32_t messagesToRead,
     uint32_t* messagesRead, int32_t* status)
 {
+    /** Need to classify behavior for status messages as well as handling
+     * multiple devices opening multiple streams.
+     */
+    for (auto& dev : CANDeviceList) {
+        auto stat = dev.first->ReadStreamSession(sessionHandle, messages, messagesToRead, messagesRead, status);
+    }
     
 }
 
@@ -226,6 +233,8 @@ void CANBridge_GetCANStatusCallback(
 {
     
 }
+
+
 
 static std::vector<int32_t> LocalCallbackStore;
 
@@ -248,7 +257,7 @@ void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId
     for (auto& driver : CANDriverList) {
         for (auto d : driver->GetDevices()) {
             if (d.descriptor.compare(descriptor) == 0) {
-                CANBridge_CANFilter dev;
+                rev::usb::CANBridge_CANFilter dev;
                 dev.messageId = messageId;
                 dev.messageMask = messageMask;
                 CANDeviceList.push_back(std::make_pair(driver->CreateDeviceFromDescriptor(descriptor), dev));
@@ -257,3 +266,18 @@ void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId
         }
     }
 }
+
+void CANBridge_UnregisterDeviceFromHAL(const wchar_t* descriptor) 
+{
+    std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>>::const_iterator device = CANDeviceList.begin();
+    for ( ; device != CANDeviceList.end(); ) {
+        if (device->first.get()->GetDescriptor().compare(descriptor) == 0) {
+            device = CANDeviceList.erase(device);
+            return;
+        } else {
+            ++device;
+        }
+    }
+}
+
+

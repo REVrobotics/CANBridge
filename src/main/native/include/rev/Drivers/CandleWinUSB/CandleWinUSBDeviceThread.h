@@ -34,17 +34,31 @@
 #include <queue>
 #include <map>
 #include <vector>
+#include <chrono>
 
 // TODO: remove me
 #include <clocale>
 #include <iostream>
 
 #include "rev/CANMessage.h"
+#include "rev/CANBridgeUtils.h"
+#include "utils/CircularBuffer.h"
 
 #include "candlelib/candle.h"
 
+#include <mockdata/CanData.h>
+#include <hal/CAN.h>
+
 namespace rev {
 namespace usb {
+
+struct CANStreamHandle {
+    uint32_t messageId;
+    uint32_t messageMask;
+    uint32_t maxSize;
+    utils::CircularBuffer<CANMessage> messages; 
+
+};
 
 namespace detail {
 
@@ -99,7 +113,62 @@ public:
         return true;
     }
 
-    bool RecieveMessage(CANMessage& msg);
+    bool RecieveMessage(std::map<uint32_t, CANMessage>* recvMap) {
+        // This needs to return all messages with the id, the it will handle which ones pass the mask
+        m_recvMutex.lock();
+        recvMap = &m_recvStore;
+        m_recvMutex.unlock();
+
+        return true;
+    }
+
+    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize) {
+        m_streamMutex.lock();
+
+        // Create the handle
+        *handle = counter++;
+
+        // Add to the map
+        m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
+
+        m_streamMutex.unlock();
+    }
+
+    void CloseStream(uint32_t handle) {
+        m_streamMutex.lock();
+        m_recvStream.erase(handle);
+        m_streamMutex.unlock();
+    }
+
+    // Return a vector of the messages, because pointer can't point to empty vector
+    // Use a circular buffer instead of just the vector
+    void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, uint32_t* messagesRead) {
+        m_streamMutex.lock();
+        *messagesRead = m_recvStream[handle]->messages.GetCount(); // first before remove
+
+        for (uint32_t i = 0; i < *messagesRead; i++) {
+            CANMessage m;
+            if (m_recvStream[handle]->messages.Remove(m)) {
+                messages[i] = ConvertCANRecieveToHALMessage(m);
+
+            }
+        }
+        m_streamMutex.unlock();
+        
+    }
+
+    static HAL_CANStreamMessage ConvertCANRecieveToHALMessage(rev::usb::CANMessage msg)
+    {
+        HAL_CANStreamMessage halMsg;
+        halMsg.timeStamp = msg.GetTimestampUs();
+        halMsg.messageID = msg.GetMessageId();
+        halMsg.dataSize = msg.GetSize();
+        memcpy(halMsg.data, msg.GetData(), sizeof(halMsg.data));
+
+        return halMsg;
+    }
+
+
 
 private:
     candle_handle m_device;
@@ -108,9 +177,13 @@ private:
     std::thread m_thread;
     std::mutex m_sendMutex;
     std::mutex m_recvMutex;
+    std::mutex m_streamMutex;
+
+    uint32_t counter = 0xe45b5597;
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
-    std::map<uint32_t, std::queue<CANMessage>> m_recvStore;
+    std::map<uint32_t, CANMessage> m_recvStore;
+    std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_recvStream; // (id, mask), max size, message buffer
 
     long long m_threadIntervalMs;
 
@@ -134,11 +207,22 @@ private:
 
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
-                    if (m_recvStore[incomingFrame.can_id].size() > 1) {
-                        m_recvStore[incomingFrame.can_id].pop();
-                    }
-                    m_recvStore[incomingFrame.can_id].push(msg);
+                    m_recvStore[incomingFrame.can_id] = msg;
                     m_recvMutex.unlock();
+
+                    m_streamMutex.lock();
+
+                    for (auto& stream : m_recvStream) {
+                        // Compare current size of the buffer to the max size of the buffer
+                        if (!stream.second->messages.IsFull()
+                            && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                            msg.GetMessageId())) {
+                            //std::cout << "CANMessage:\t" << static_cast<uint32_t>(msg.GetDeviceType()) << "   " << static_cast<uint32_t>(msg.GetManufacturer()) << "   " << msg.GetMessageId() << std::endl;
+
+                            stream.second->messages.Add(msg);
+                        }
+                    }
+                    m_streamMutex.unlock();
                 }
             }
 

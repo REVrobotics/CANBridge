@@ -32,6 +32,10 @@
 
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
+#include "rev/CANBridgeUtils.h"
+
+#include <mockdata/CanData.h>
+#include <hal/CAN.h>
 
 namespace rev {
 namespace usb {
@@ -47,10 +51,10 @@ public:
     virtual int GetId() const = 0;
 
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) = 0;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) = 0;
-    virtual CANStatus OpenStreamSession() = 0;
-    virtual CANStatus CloseStreamSession() = 0;
-    virtual CANStatus ReadStreamSession() = 0;
+    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask) = 0;
+    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) = 0;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle) = 0;
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status) = 0;
 
     virtual CANStatus GetCANStatus() = 0;
 
