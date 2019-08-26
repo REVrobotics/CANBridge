@@ -28,6 +28,9 @@
 
 #pragma once
 
+#ifndef _CANBRIDGEUTILS_H_
+#define _CANBRIDGEUTILS_H_
+
 #include <string>
 
 #include "rev/CANBridge.h"
@@ -47,15 +50,11 @@ namespace usb {
 
     void convert_wstring_to_string(const std::wstring& in, std::string& out); 
 
-    static bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask = 0) 
-    {
-        return (filter.messageId & mask) == (filter.messageMask & id);
-    }
+    bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask = 0); 
 
-    static bool CANMessageCompare(CANMessage a, CANMessage b) 
-    {
-        return a.GetTimestampUs() < b.GetTimestampUs();
-    }
+    bool CANMessageCompare(CANMessage a, CANMessage b);
 
 } // namespace rev
 } // namespace usb
+
+#endif // _CANBRDIGEUTILS_H_

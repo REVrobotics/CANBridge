@@ -36,7 +36,6 @@
 #include <memory>
 
 #include "candlelib/candle.h"
-#include "rev/CANBridgeUtils.h"
 
 namespace rev {
 namespace usb {

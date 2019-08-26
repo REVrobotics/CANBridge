@@ -37,7 +37,6 @@
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
-#include "rev/CANBridgeUtils.h"
 
 #ifdef _WIN32
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"

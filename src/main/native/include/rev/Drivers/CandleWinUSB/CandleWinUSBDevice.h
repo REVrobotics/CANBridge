@@ -37,7 +37,6 @@
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
-#include "rev/CANBridgeUtils.h"
 
 namespace rev {
 namespace usb {
