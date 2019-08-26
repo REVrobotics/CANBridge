@@ -199,14 +199,14 @@ void CANBridge_OpenStreamSessionCallback(
 {
     for (auto& dev : CANDeviceList) {
         auto stat = dev.first->OpenStreamSession(sessionHandle, {messageID, messageIDMask}, maxMessages);
+        *status = (int32_t)stat;
     }
 }
 
 void CANBridge_CloseStreamSessionCallback(const char* name, void* param, uint32_t sessionHandle)
 {
     for (auto& dev : CANDeviceList) {        
-        auto stat = dev.first->CloseStreamSession(sessionHandle);
-        
+        dev.first->CloseStreamSession(sessionHandle);
     } 
 }
 
@@ -221,8 +221,8 @@ void CANBridge_ReadStreamSessionCallback(
      */
     for (auto& dev : CANDeviceList) {
         auto stat = dev.first->ReadStreamSession(sessionHandle, messages, messagesToRead, messagesRead, status);
+        *status = (int32_t)stat;
     }
-    
 }
 
 void CANBridge_GetCANStatusCallback(
