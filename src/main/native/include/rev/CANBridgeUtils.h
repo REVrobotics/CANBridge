@@ -50,9 +50,9 @@ namespace usb {
 
     void convert_wstring_to_string(const std::wstring& in, std::string& out); 
 
-    bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask = 0); 
+    bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id); 
 
-    bool CANMessageCompare(CANMessage a, CANMessage b);
+    bool CANMessageCompare(CANMessage& a, CANMessage& b);
 
 } // namespace rev
 } // namespace usb

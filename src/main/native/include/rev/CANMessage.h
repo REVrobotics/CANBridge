@@ -34,6 +34,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
+#include <chrono>
 
 namespace rev {
 namespace usb {
@@ -75,7 +76,11 @@ class CANMessage {
 public:
     CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
     CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize, uint32_t timestampUs = 0) :
-        m_size(dataSize), m_messageId(messageId), m_timestamp(timestampUs) {
+        m_size(dataSize), m_messageId(messageId) {
+            // time_point_cast<milliseconds>(now).time_since_epoch().count();
+
+            m_timestamp = (timestampUs != 0) ? timestampUs : std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
+            
             std::memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
     }
 
@@ -141,7 +146,15 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream &os, const CANMessage& m) { 
-        return os << "Message Id: " << m.GetMessageId() << " Size: " << m.GetSize() << " Data: " << std::hex << m.GetData();
+        os << "Message Id: " << (int)m.GetMessageId() << " Size: " << (int)m.GetSize() << " Data: ";
+        auto data = m.GetData();
+        for (int i = 0; i < 8; i++) {
+             os << std::hex << (int)(data[i]) << "_";
+        }
+        // for (int i = 0; i < (int)m.GetSize(); i++) {
+        //     os << std::hex << (int)data[i] << "_";
+        // }
+        return os;
     }
 
    

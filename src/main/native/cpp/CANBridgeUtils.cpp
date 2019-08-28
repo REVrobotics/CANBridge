@@ -41,14 +41,17 @@ void convert_wstring_to_string(const std::wstring& in, std::string& out)
     out = converter.to_bytes(in.c_str());
 }
 
-bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id, uint32_t mask) 
+bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
 {
-    return (filter.messageId & mask) == (filter.messageMask & id);
+    bool result = (filter.messageMask & id) == (filter.messageMask & filter.messageId); 
+    
+    return result;
 }
 
-bool CANMessageCompare(CANMessage a, CANMessage b) 
+bool CANMessageCompare(CANMessage& a, CANMessage& b) 
 {
-    return a.GetTimestampUs() < b.GetTimestampUs();
+    std::cout << ">> time: " << a.GetTimestampUs() << " " << b.GetTimestampUs() << std::endl;
+    return a.GetTimestampUs() > b.GetTimestampUs();
 }
 
 }
