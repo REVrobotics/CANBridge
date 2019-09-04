@@ -37,7 +37,7 @@
 namespace rev {
 namespace usb {
 
-struct CANDeviceDetail {
+struct  CANDeviceDetail {
     std::wstring descriptor;
     std::string name;
     std::string driverName;

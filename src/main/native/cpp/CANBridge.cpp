@@ -152,9 +152,9 @@ void CANBridge_ReceiveMessageCallback(
     // 1) Recieve on all registered channels
     for (auto& dev : CANDeviceList) {
             struct CANBridge_CANRecieve msg;
-            auto stat = dev.first->RecieveCANMessage(msg.m_message, messageIDMask);
+            auto stat = dev.first->RecieveCANMessage(msg.m_message, *messageID, messageIDMask);
 
-        if (rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId(), messageIDMask)) {
+        if (rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId())) {
             msg.status = CANBridge_StatusToHALError(stat);
             recieves.push_back(msg);
         }
@@ -178,9 +178,15 @@ void CANBridge_ReceiveMessageCallback(
 
             if(*dataSize > 8) {
                 *dataSize = 8;
-            }
+            }            
 
             memcpy(data, recv.m_message.GetData(), *dataSize);
+
+            std::cout << "1) msg id: " << (int)recv.m_message.GetMessageId() << " data: ";//<< static_cast<uint16_t>((incomingFrame.can_id & 0xFFC0) >> 6) << " data: ";
+            for (int i = 0; i < 8; i++) {
+                std::cout << std::hex << (int)data[i] << "_";
+            }
+            std::cout << "\n";
             return;
         }
     }

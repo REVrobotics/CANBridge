@@ -95,23 +95,40 @@ int CandleWinUSBDevice::GetId() const
 
 CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
+    auto data = msg.GetData();
+    // std::cout << "sent) msg id: " << (int)msg.GetMessageId() << " data: ";
+    // for (int i = 0; i < 8; i++) {
+    //     std::cout << std::hex << (int)(data[i]) << "_";
+    // }
+    // std::cout << "\n";
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageMask)
+CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
 {
     // parse through the keys, find the messges the match, and return it
     std::map<uint32_t, CANMessage> messages;
-    m_thread.RecieveMessage(&messages);
+    m_thread.RecieveMessage(messages);
 
     CANMessage mostRecent;
     for (auto m : messages) {
-        if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first, messageMask)) {
-            mostRecent = CANMessageCompare(m.second, mostRecent) ? m.second : mostRecent;
+        if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+            std::cout << ">> mask:  " << (messageMask & messageID) << " == " << (messageMask & m.first) << std::endl;
+
+            mostRecent = m.second;
+            
         }
     }
     msg = mostRecent;
+
+    auto data = msg.GetData();
+    std::cout << "3) msg id: " << (int)msg.GetMessageId() << " data: ";
+    for (int i = 0; i < 8; i++) {
+        std::cout << std::hex << (int)(data[i]) << "_";
+    }
+    std::cout << "\n";
+
 
     return CANStatus::kOk;
 }

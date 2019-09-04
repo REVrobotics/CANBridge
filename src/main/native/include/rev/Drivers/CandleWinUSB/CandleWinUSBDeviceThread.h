@@ -39,6 +39,7 @@
 // TODO: remove me
 #include <clocale>
 #include <iostream>
+#include <iterator>
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
@@ -113,10 +114,10 @@ public:
         return true;
     }
 
-    bool RecieveMessage(std::map<uint32_t, CANMessage>* recvMap) {
+    bool RecieveMessage(std::map<uint32_t, CANMessage>& recvMap) {
         // This needs to return all messages with the id, the it will handle which ones pass the mask
         m_recvMutex.lock();
-        recvMap = &m_recvStore;
+        recvMap = m_recvStore;
         m_recvMutex.unlock();
 
         return true;
@@ -202,8 +203,17 @@ private:
                 // Recieved a new frame, store it
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
+                    // std::cout << "time " <<  incomingFrame.timestamp_us << "\n";
 
-                    //std::cout << "Recieved Message: " << std::hex << msg << std::endl;
+                    // auto data = incomingFrame.data;
+                    // std::cout << "2) msg id: " << (int)incomingFrame.can_id << " data: ";
+                    // for (int i = 0; i < 8; i++) {
+                    //     std::cout << std::hex << (int)(data[i]) << "_";
+                    // }
+                    // std::cout << "\n";
+                    
+
+                    // std::cout << msg << std::endl;
 
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
