@@ -45,7 +45,7 @@ class CandleWinUSBDevice : public CANDevice {
 public:
     CandleWinUSBDevice() =delete;
     CandleWinUSBDevice(candle_handle hDev);
-    ~CandleWinUSBDevice();
+    virtual ~CandleWinUSBDevice();
 
     virtual std::string GetName() const;
     virtual std::wstring GetDescriptor() const;

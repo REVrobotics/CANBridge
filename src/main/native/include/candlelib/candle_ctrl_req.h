@@ -35,4 +35,6 @@ bool candle_ctrl_get_config(candle_device_t *dev, candle_device_config_t *dconf)
 bool candle_ctrl_get_capability(candle_device_t *dev, uint8_t channel, candle_capability_t *data);
 bool candle_ctrl_set_bittiming(candle_device_t *dev, uint8_t channel, candle_bittiming_t *data);
 bool candle_ctrl_get_timestamp(candle_device_t *dev, uint32_t *current_timestamp);
+bool candle_ctrl_set_user_id(candle_device_t *dev, uint8_t channel, uint32_t id);
+bool candle_ctrl_get_user_id(candle_device_t *dev, uint32_t *id);
 

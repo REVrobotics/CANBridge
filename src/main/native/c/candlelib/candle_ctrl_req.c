@@ -37,6 +37,9 @@ enum {
     CANDLE_BREQ_BERR,
     CANDLE_BREQ_BT_CONST,
     CANDLE_BREQ_DEVICE_CONFIG,
+    CANDLE_BREQ_IDENTIFY,
+    CANDLE_BREQ_GET_USER_ID,
+    CANDLE_BREQ_SET_USER_ID,
     CANDLE_TIMESTAMP_GET = 0x40,
     CANDLE_TIMESTAMP_ENABLE = 0x41,
 };
@@ -126,7 +129,6 @@ bool candle_ctrl_set_device_mode(candle_device_t *dev, uint8_t channel, uint32_t
     return rc;
 }
 
-
 bool candle_ctrl_get_config(candle_device_t *dev, candle_device_config_t *dconf)
 {
     bool rc = usb_control_msg(
@@ -137,6 +139,38 @@ bool candle_ctrl_get_config(candle_device_t *dev, candle_device_config_t *dconf)
         dev->interfaceNumber,
         dconf,
         sizeof(*dconf)
+    );
+
+    dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_GET_DEVICE_INFO;
+    return rc;
+}
+
+bool candle_ctrl_set_user_id(candle_device_t *dev, uint8_t channel, uint32_t id)
+{
+    bool rc = usb_control_msg(
+        dev->winUSBHandle,
+        CANDLE_BREQ_SET_USER_ID,
+        USB_DIR_OUT|USB_TYPE_VENDOR|USB_RECIP_INTERFACE,
+        channel,
+        dev->interfaceNumber,
+        &id,
+        sizeof(id)
+    );
+
+    dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_SET_DEVICE_MODE;
+    return rc;
+}
+
+bool candle_ctrl_get_user_id(candle_device_t *dev, uint32_t *id)
+{
+    bool rc = usb_control_msg(
+        dev->winUSBHandle,
+        CANDLE_BREQ_GET_USER_ID,
+        USB_DIR_IN|USB_TYPE_VENDOR|USB_RECIP_INTERFACE,
+        1,
+        dev->interfaceNumber,
+        id,
+        sizeof(*id)
     );
 
     dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_GET_DEVICE_INFO;

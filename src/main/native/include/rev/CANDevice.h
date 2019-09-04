@@ -43,7 +43,7 @@ namespace usb {
 class CANDevice {
 public:
     CANDevice() {}
-    ~CANDevice() {}
+    virtual ~CANDevice() {}
 
     virtual std::string GetName() const = 0;
     virtual std::wstring GetDescriptor() const {return std::wstring();}

@@ -72,6 +72,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
 CandleWinUSBDevice::~CandleWinUSBDevice()
 {
     m_thread.Stop();
+    
     candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
     close_candle_dev(m_handle);
 }
