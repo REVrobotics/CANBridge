@@ -77,10 +77,9 @@ public:
     CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
     CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize, uint32_t timestampUs = 0) :
         m_size(dataSize), m_messageId(messageId) {
-            // time_point_cast<milliseconds>(now).time_since_epoch().count();
 
             m_timestamp = (timestampUs != 0) ? timestampUs : std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
-            
+            std::memset(m_data, 0, 8);
             std::memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
     }
 
@@ -141,6 +140,15 @@ public:
         return m_size;
     }
 
+    bool IsEmpty() const {
+        for (int i = 0; i < 8; i++) {
+            if (m_data[i] != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     uint32_t GetTimestampUs() const {
         return m_timestamp;
     }
@@ -151,9 +159,7 @@ public:
         for (int i = 0; i < 8; i++) {
              os << std::hex << (int)(data[i]) << "_";
         }
-        // for (int i = 0; i < (int)m.GetSize(); i++) {
-        //     os << std::hex << (int)data[i] << "_";
-        // }
+
         return os;
     }
 

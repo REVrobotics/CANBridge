@@ -198,37 +198,29 @@ private:
             bool reading = true;
             while (reading) {
                 candle_frame_t incomingFrame;
+                incomingFrame.can_id = 19088743;
+                for (int i = 0; i < 8; i++) {
+                    incomingFrame.data[i] = 9;
+                }
                 reading = candle_frame_read(m_device, &incomingFrame, 0);
 
                 // Recieved a new frame, store it
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
-                    // std::cout << "time " <<  incomingFrame.timestamp_us << "\n";
-
-                    // auto data = incomingFrame.data;
-                    // std::cout << "2) msg id: " << (int)incomingFrame.can_id << " data: ";
-                    // for (int i = 0; i < 8; i++) {
-                    //     std::cout << std::hex << (int)(data[i]) << "_";
-                    // }
-                    // std::cout << "\n";
                     
-
-                    // std::cout << msg << std::endl;
-
                     // TODO: The queue is for streaming API, implement that here
                     m_recvMutex.lock();
-                    m_recvStore[incomingFrame.can_id] = msg;
+                    if (msg.GetSize() != 0) {
+                        m_recvStore[incomingFrame.can_id] = msg;
+                    }
                     m_recvMutex.unlock();
 
                     m_streamMutex.lock();
-
                     for (auto& stream : m_recvStream) {
                         // Compare current size of the buffer to the max size of the buffer
                         if (!stream.second->messages.IsFull()
                             && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
                             msg.GetMessageId())) {
-                            //std::cout << "CANMessage:\t" << static_cast<uint32_t>(msg.GetDeviceType()) << "   " << static_cast<uint32_t>(msg.GetManufacturer()) << "   " << msg.GetMessageId() << std::endl;
-
                             stream.second->messages.Add(msg);
                         }
                     }
@@ -258,12 +250,7 @@ private:
 
                     // TODO: Feed back an error
                     if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                        //std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
-                        //wchar_t tmp[512];
-                        //candle_windows_error_text(candle_dev_last_windows_error(m_device), tmp, 512);
-                        //std::wcout << L"Fail Code Windows: " << tmp << std::endl;
-                    } else {
-                        //std::cout << "Frame sent successfully" << std::endl;
+                        std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                     }
                 }
 

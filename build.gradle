@@ -6,6 +6,7 @@ plugins {
   id 'edu.wpi.first.NativeUtils' version '2019.5.15'
   id 'edu.wpi.first.GradleJni' version '0.9.0'
   id 'edu.wpi.first.GradleVsCode' version '0.9.0'
+  id 'google-test-test-suite'
 }
 
 apply from: 'config.gradle'
@@ -75,6 +76,30 @@ model {
       }
     }
     
+  }
+
+  testSuites {
+    CANBridgeTest(GoogleTestTestSuiteSpec) {
+      testing $.components.CANBridge
+      sources.cpp {
+        source {
+          srcDir 'src/test/gtest/cpp'
+          include '**/*.cpp'
+        }
+        exportedHeaders {
+          srcDirs 'src/test/gtest/include/'
+        }
+      }
+
+      binaries.all {
+        lib library: "CandleLib", linkage: 'static'
+        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
+          it.buildable = false
+        }
+        // lib library: "SparkMaxDriver", linkage: 'shared'
+      }
+      nativeUtils.useRequiredLibrary(it, "wpilib_shared", "googletest_static")
+    }
   }
 }
 

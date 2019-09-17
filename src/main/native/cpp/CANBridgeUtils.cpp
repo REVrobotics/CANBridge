@@ -50,7 +50,6 @@ bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id)
 
 bool CANMessageCompare(CANMessage& a, CANMessage& b) 
 {
-    std::cout << ">> time: " << a.GetTimestampUs() << " " << b.GetTimestampUs() << std::endl;
     return a.GetTimestampUs() > b.GetTimestampUs();
 }
 

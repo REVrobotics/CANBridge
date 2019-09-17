@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 REV Robotics
+ * Copyright (c) 2018-2019 REV Robotics
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,16 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "gtest/gtest.h"
+#include <iostream>
 
-namespace rev {
-namespace usb {
-
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154
-};
-
-} // namespace usb
-} // namespace rev
+#include "rev/CANBridge.h"
