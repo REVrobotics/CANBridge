@@ -40,24 +40,16 @@ namespace usb {
 
 std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
 {
-    // Search driver layer for devices
-    candle_list_handle clist;
-    uint8_t num_interfaces;
-    candle_handle dev;
     std::vector<CANDeviceDetail> retval;
 
-    if (candle_list_scan(&clist)) {
-        if (candle_list_length(clist, &num_interfaces)) {
-            for (uint8_t i=0; i<num_interfaces; i++) {
-                if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring wpath(candle_dev_get_path(dev));
-                    std::string name(candle_dev_get_name(dev));
-                    retval.push_back({wpath, name, this->GetName()});
-                }
-            }
-        }
-        candle_list_free(clist);
+    printf("Scanning for TCP devices...\n");
+    TCPBridgeDevice m_dev{"172.22.11.2"};
+    if(m_dev.IsConnected()) {
+        retval.push_back({m_dev.GetDescriptor(), "roboRIO", this->GetName()});
+        std::cout << "device added in GetDevices()" << std::endl;
     }
+    else
+        std::cout << "Could not connect" << std::endl;
 
     return retval;
 }
@@ -65,25 +57,33 @@ std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
 std::unique_ptr<CANDevice> TCPBridgeDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
 {
     // Search driver layer for devices
-    candle_list_handle clist;
-    uint8_t num_interfaces;
-    candle_handle dev;
+    // candle_list_handle clist;
+    // uint8_t num_interfaces;
+    // candle_handle dev;
 
-    if (candle_list_scan(&clist)) {
-        if (candle_list_length(clist, &num_interfaces)) {
-            for (uint8_t i=0; i<num_interfaces; i++) {
-                if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring path(candle_dev_get_path(dev));
+    std::string ipAddr;
+    convert_wstring_to_string(descriptor, ipAddr);
 
-                    if (path == std::wstring(descriptor)) {
-                        return std::make_unique<TCPBridgeDevice>(dev);
-                    }
-                }
-            }
-        }
-        candle_list_free(clist);
-    }
-    return std::unique_ptr<CANDevice>();
+    // TCPBridgeDevice m_dev{"172.22.11.2"};
+    // if(m_dev.Connect())
+    std::cout << "Creating unique pointer to device" << std::endl;
+    return std::make_unique<TCPBridgeDevice>("172.22.11.2");
+
+    // if (candle_list_scan(&clist)) {
+    //     if (candle_list_length(clist, &num_interfaces)) {
+    //         for (uint8_t i=0; i<num_interfaces; i++) {
+    //             if (candle_dev_get(clist, i, &dev)) {
+    //                 std::wstring path(candle_dev_get_path(dev));
+
+    //                 if (path == std::wstring(descriptor)) {
+    //                     return std::make_unique<TCPBridgeDevice>(dev);
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     candle_list_free(clist);
+    // }
+    // return std::unique_ptr<CANDevice>();
 }
 
 } // namespace usb
