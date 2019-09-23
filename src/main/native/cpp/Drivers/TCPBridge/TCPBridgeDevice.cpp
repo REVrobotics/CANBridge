@@ -30,148 +30,62 @@
 #include "rev/Drivers/TCPBridge/TCPBridgePackets.h"
 
 #include <iostream> //TODO: Remove
-#include <thread>
-#include <locale>
-#include <codecvt>
-#include <memory.h>
 
-#include <mockdata/CanData.h>
-#include <hal/CAN.h>
+#define __TCP_DEBUG__   0
 
-#include <stdio.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#pragma comment (lib,"ws2_32.lib")
-#pragma comment (lib, "Mswsock.lib")
-#pragma comment (lib, "AdvApi32.lib")
+#include <asio.hpp>
+using asio::ip::tcp;
 
 #define DEFAULT_PORT "8800"
 
 namespace rev {
 namespace usb {
 
-TCPBridgeDevice::TCPBridgeDevice(std::string ip)
+TCPBridgeDevice::TCPBridgeDevice(const std::string ip, const unsigned short port)
+    : m_ip(asio::ip::address::from_string(ip)), m_port(port), m_sock(m_ioservice)
 {
-    m_ip = ip;
-    if(Connect())
-        m_isConnected = true;
+    m_isConnected = Connect();
 }
 
 TCPBridgeDevice::~TCPBridgeDevice()
 {
-    // printf("Closing socket\n");
-    closesocket(ConnectSocket);
-    WSACleanup();
+    // std::cout << "Closing device" << std::endl;
 }
 
 bool TCPBridgeDevice::Connect()
 {
-    WSADATA wsaData;
-    struct addrinfo *result = NULL, *ptr = NULL, hints;
-    int iResult;
-    char s[INET6_ADDRSTRLEN];
+    std::string ipStr = m_ip.to_string();
+    #if __TCP_DEBUG__
+    std::cout << "Connecting to " << ipStr << ":" << m_port << std::endl;
+    #endif
+    try
+    {
+        asio::ip::tcp::endpoint endpoint(m_ip, m_port);
 
-    // Initialize Winsock
-    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-    if (iResult != 0) {
-        printf("WSAStartup failed with error: %d\n", iResult);
-        return false;
-    }
-
-    // printf("Winsock initialized.\n");
-
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    // printf("Getting address info\n");
-    iResult = getaddrinfo(m_ip.c_str(), DEFAULT_PORT, &hints, &result);
-    if ( iResult != 0 ) {
-        printf("getaddrinfo failed with error: %d\n", iResult);
-        WSACleanup();
-        return false;
-    }
-
-    // Attempt to connect to an address until one succeeds
-    // printf("Attempting to connect.\n");
-    for(ptr=result; ptr != NULL ;ptr=ptr->ai_next) {
-        // Create a SOCKET for connecting to server
-        ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, 
-            ptr->ai_protocol);
-        if (ConnectSocket == INVALID_SOCKET) {
-            printf("socket failed with error: %ld\n", WSAGetLastError());
-            WSACleanup();
+        asio::error_code error = asio::error::host_not_found;
+        m_sock.connect(endpoint, error);
+    
+        if(error)
+        {
+            std::cerr << "Can't connect to host" << std::endl;
             return false;
         }
 
-        // Connect to server.
-        iResult = connect( ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-        if (iResult == SOCKET_ERROR) {
-            closesocket(ConnectSocket);
-            printf("connect failed with error: %d\n", iResult);
-            ConnectSocket = INVALID_SOCKET;
-            continue;
-        }
+        asio::ip::tcp::no_delay option_d(true);
+        m_sock.set_option(option_d);
+        asio::socket_base::send_buffer_size option_s(256);
+        m_sock.set_option(option_s);
 
-        break;
     }
-
-    freeaddrinfo(result);
-    
-    if (ConnectSocket == INVALID_SOCKET) {
-        printf("Unable to connect to server!\n");
-        WSACleanup();
+    catch(std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        std::cerr << "Exception occured while trying to connect." << std::endl;
         return false;
     }
-
-    int iOptVal = 0;
-    int iOptLen = sizeof (int);
-    if(setsockopt(ConnectSocket, SOL_SOCKET, SO_SNDBUF, (char *) &iOptVal, iOptLen) == SOCKET_ERROR)
-    {
-        printf("getsockopt for SO_SNDBUF failed with error: %u\n", WSAGetLastError());
-    } else
-    {
-        printf("SO_SNDBUF Value: %d\n", iOptVal);
-    }
-
-    bool bOptVal = true;
-    int bOptLen = sizeof (bool);
-    iResult = setsockopt(ConnectSocket, SOL_SOCKET, TCP_NODELAY, (char *) &bOptVal, bOptLen);
-    if(iResult == SOCKET_ERROR) {
-        printf("setsockopt for TCP_NODELAY failed with error: %u\n", WSAGetLastError());
-    } else
-    {
-        printf("Set TCP_NODELAY: ON\n");
-    }
-
-    // void *addr;
-    // std::string ipver;
-
-    // // Get the pointer to the address itself, different fields in IPv4 and IPv6
-    // if (ptr->ai_family == AF_INET)
-    // {
-    //     // IPv4
-    //     struct sockaddr_in *ipv4 = (struct sockaddr_in *)ptr->ai_addr;
-    //     addr = &(ipv4->sin_addr);
-    //     ipver = "IPv4";
-    // }
-    // else
-    // {
-    //     // IPv6
-    //     struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)ptr->ai_addr;
-    //     addr = &(ipv6->sin6_addr);
-    //     ipver = "IPv6";
-    // }
-
-    // inet_ntop(ptr->ai_family, addr, (PSTR)s, sizeof(s));
-    // std::cout << "Socket connected to " << ipver << ": " << s << std::endl;
     
-    m_descriptor = converter.from_bytes(s);
-    m_name = s;
+    m_descriptor = converter.from_bytes(ipStr + ":" + std::to_string(m_port));
+    m_name = ipStr;
 
     return true;
 }
@@ -192,7 +106,57 @@ int TCPBridgeDevice::GetId() const
     return 0;
 }
 
-void TCPBridgeDevice::serialize_send_msg_packet(const CANMessage& msg, int periodMs) {
+bool TCPBridgeDevice::Send(uint8_t* buf, size_t sendSize)
+{
+    size_t sentSize = 0;
+    try
+    {
+        sentSize = m_sock.send(asio::buffer(buf, sendSize));
+    }
+    catch(std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occured while trying to send data" << std::endl;
+        return false;
+    }
+
+    return (sentSize == sendSize);
+}
+
+size_t TCPBridgeDevice::Recv()
+{
+    asio::error_code error;
+    size_t len = 0;
+    
+    try
+    {
+        len = m_sock.read_some(asio::buffer(recbuf), error);
+    }
+    catch(std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occured while trying to receive data" << std::endl;
+        return 0;
+    }
+    
+    #if __TCP_DEBUG__
+    printf("%zd bytes rec'd\n", len);
+    #endif
+
+    // for(size_t i = 0; i < len; i++)
+    //     printf("\t%3zd: 0x%02X\n", i, recbuf[i]);
+
+    if (error == asio::error::eof) {
+        #if __TCP_DEBUG__
+        std::cout << "Client disconnected" << std::endl;
+        #endif
+        m_isConnected = false;
+    }
+
+    return len;
+}
+
+void TCPBridgeDevice::SerializeSendMsgPacket(const CANMessage& msg, int periodMs) {
 	sendbuf[0] = HEADER_TOKEN;
 	sendbuf[1] = 22;
 	sendbuf[2] = SEND_MSG;
@@ -201,9 +165,7 @@ void TCPBridgeDevice::serialize_send_msg_packet(const CANMessage& msg, int perio
     uint32_t messageID = msg.GetMessageId();
     memcpy(&sendbuf[4], &messageID, 4);
     memcpy(&sendbuf[8], &periodMs, 4);
-	
 	sendbuf[12] = msg.GetSize();
-	
 	memcpy(sendbuf + 13, msg.GetData(), msg.GetSize());
 	
 	sendbuf[21] = TRAILER_TOKEN;
@@ -211,15 +173,18 @@ void TCPBridgeDevice::serialize_send_msg_packet(const CANMessage& msg, int perio
 
 CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-    std::cout << "Send message..." << std::endl;
+    #if __TCP_DEBUG__
+    std::cout << "Sending CAN message..." << std::endl;
+    #endif
 
-    serialize_send_msg_packet(msg, periodMs);
-
-    if(send(ConnectSocket, (char *) sendbuf, 22, 0) == SOCKET_ERROR) {
-        printf("send failed: %d\n", WSAGetLastError());
+    if(!IsConnected()) {
+        std::cerr << "Error, not connected" << std::endl;
+        return CANStatus::kError;
     }
 
-    return CANStatus::kOk;
+    SerializeSendMsgPacket(msg, periodMs);
+
+    return Send(sendbuf, 22) ? CANStatus::kOk : CANStatus::kError;
 }
 
 void TCPBridgeDevice::SerializeRecieveCANMessage(uint32_t messageID, uint32_t messageMask)
@@ -238,31 +203,37 @@ void TCPBridgeDevice::SerializeRecieveCANMessage(uint32_t messageID, uint32_t me
 
 CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
 {
-    std::cout << "Receive message" << std::endl;
+    #if __TCP_DEBUG__
+    std::cout << "Receiving message..." << std::endl;
+    #endif
 
     int numbytes = 0;
     uint32_t messagesRead = 0;
-
-    // send read stream packet
-    std::cout << "Data size: " << msg.GetSize() << std::endl;
     SerializeRecieveCANMessage(messageID, messageMask);
 
-    if(send(ConnectSocket, (char *) sendbuf, 14, 0) == SOCKET_ERROR) {
-        printf("send failed: %d\n", WSAGetLastError());
+    if(!Send(sendbuf, 14))
+    {
+        return CANStatus::kError;
     }
 
     // get response
-    if((numbytes = recv(ConnectSocket, recbuf, 100, 0)) == SOCKET_ERROR) {
-        printf("Receive failed: %d\n", WSAGetLastError());
+    numbytes = Recv();
+
+    if(ParseStreamResponse(&messagesRead) != 0)
+    {
+        return CANStatus::kError;
     }
 
-    if(parse_stream_res((uint8_t *)recbuf, &messagesRead) != 0) {
-        printf("Error parsing messages packet\n");
+    #if __TCP_DEBUG__
+    std::cout << "Messages read " << messagesRead << std::endl;
+    #endif
+
+    if(messagesRead == 0)
+    {
+        return CANStatus::kError;
     }
 
-    if((numbytes = recv(ConnectSocket, recbuf, 1024, 0)) == SOCKET_ERROR) {
-        printf("Receive failed: %d\n", WSAGetLastError());
-    }
+    numbytes = Recv();
 
     int bytesRemaining = 0;
     int msg_idx = 0;
@@ -271,13 +242,22 @@ CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID
     // TODO: make deserialize CAN message func
     uint8_t tmp[8];
     uint32_t timestamp;
+    uint8_t datasize;
     memcpy(&messageID, &recbuf[0], 4);
     memcpy(&timestamp, &recbuf[4], 4);
+    datasize = recbuf[8];
     memcpy(tmp, &recbuf[9], 8);
-    // halMsg.dataSize = recbuf[8];
-    // memcpy(halMsg.data, &recbuf[9], sizeof(halMsg.data));
-    CANMessage tmsg = CANMessage(messageID, tmp, recbuf[8], timestamp);
-    msg = tmsg;
+    msg = CANMessage(messageID, tmp, datasize, timestamp);
+
+    #if __TCP_DEBUG__
+    std::cout << "\tMessage ID: " << messageID << std::endl;
+    std::cout << "\tTimestamp: " << timestamp << std::endl;
+    // std::cout << "\tDatasize: " << datasize << std::endl;
+    printf("\tDatasize: 0x%02X\n", datasize);
+    for(uint8_t i = 0; i < datasize; i++) {
+        printf("\t0x%02X\n", recbuf[9 + i]);
+    }
+    #endif
 
     return CANStatus::kOk;
 }
@@ -296,16 +276,21 @@ void TCPBridgeDevice::SerializeOpenStreamMessage(CANBridge_CANFilter filter, uin
 	sendbuf[16] = TRAILER_TOKEN;
 }
 
-CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
+CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle,
+                                             CANBridge_CANFilter filter,
+                                             uint32_t maxSize)
 {
+    #if __TCP_DEBUG__
     std::cout << "Opening Stream:" << std::endl;
     std::cout << "\tMessage ID: " << filter.messageId << std::endl;
     std::cout << "\tMessage Mask: " << filter.messageMask << std::endl;
+    #endif
 
     SerializeOpenStreamMessage(filter, maxSize);
 
-    if(send(ConnectSocket, (char *) sendbuf, 100, 0) == SOCKET_ERROR ) {
-        printf("send failed: %d\n", WSAGetLastError());
+    if(!Send(sendbuf, 17))
+    {
+        std::cerr << "Error sending" << std::endl;
     }
 
     return CANStatus::kOk;
@@ -317,34 +302,33 @@ CANStatus TCPBridgeDevice::CloseStreamSession(uint32_t sessionHandle)
     return CANStatus::kOk;
 }
 
-int TCPBridgeDevice::check_packet(uint8_t *buf, int *packet_size) {
-    if(buf[0] != HEADER_TOKEN) {
-        printf("Invalid command packet rec'd\n");
+int TCPBridgeDevice::CheckPacket(int *packet_size) {
+    if((uint8_t)recbuf[0] != HEADER_TOKEN) {
+        std::cerr << "Invalid packet rec'd" << std::endl;
         return -1;
     }
 
-    *packet_size = buf[1];
+    *packet_size = recbuf[1];
 
-    if((*packet_size > MAXBUFFERSIZE) || (buf[*packet_size-1] != TRAILER_TOKEN)) {
-        printf("Invalid packet size rec'd: %d\n", *packet_size-1);
+    if((*packet_size > MAXBUFFERSIZE) || (recbuf[*packet_size-1] != TRAILER_TOKEN)) {
+        std::cerr << "Invalid packet size rec'd: " << *packet_size-1 << std::endl;
         return -2;
     }
 
     return 0;
 }
 
-int TCPBridgeDevice::parse_stream_res(uint8_t *buf, uint32_t* num_messages) {
+int TCPBridgeDevice::ParseStreamResponse(uint32_t* num_messages) {
 	int packet_size = 0;
-	if(check_packet(buf, &packet_size) != 0) {
-		printf("Packet failed checking\n");
+	if(CheckPacket(&packet_size) != 0) {
 		return -1;
 	}
 	
 	uint32_t tmp = 0;
-	tmp = buf[4];
-	tmp |= (buf[5] << 8);
-	tmp |= (buf[6] << 16);
-	tmp |= (buf[7] << 24);
+	tmp = recbuf[4];
+	tmp |= (recbuf[5] << 8);
+	tmp |= (recbuf[6] << 16);
+	tmp |= (recbuf[7] << 24);
 		
 	*num_messages = tmp;
 	return 0;
@@ -368,25 +352,28 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
                                              int32_t* status)
 {
     int numbytes = 0;
-    // std::cout << "Reading stream..." << std::endl;
+    #if __TCP_DEBUG__
+    std::cout << "Reading stream..." << std::endl;
+    #endif
 
     // send read stream packet
     SerializeReadStreamMessage(messagesToRead);
 
-    if(send(ConnectSocket, (char *) sendbuf, 17, 0) == SOCKET_ERROR) {
-        printf("send failed: %d\n", WSAGetLastError());
+    if(!Send(sendbuf, 9))
+    {
+        return CANStatus::kError;
     }
 
-    // get response
-    if((numbytes = recv(ConnectSocket, recbuf, 100, 0)) == SOCKET_ERROR) {
-        printf("Receive failed: %d\n", WSAGetLastError());
-    }
+    // // get response
+    numbytes = Recv();
 
-    if(parse_stream_res((uint8_t *)recbuf, messagesRead) != 0) {
-        printf("Error parsing messages packet\n");
+    if(ParseStreamResponse(messagesRead) != 0) {
+        return CANStatus::kError;
     }
     
-    // printf("num_messages read: %d\n", *messagesRead);
+    #if __TCP_DEBUG__
+    std::cout << "Number of messages read: " << *messagesRead << std::endl;
+    #endif
 
     // wait to get all messages
     int bytesRemaining = 0;
@@ -394,14 +381,11 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
     uint32_t msgNum = 0;
     while(msgNum < *messagesRead) {
         // printf("Receiving messages...\n");
-        if((numbytes = recv(ConnectSocket, recbuf, 1024, 0)) == SOCKET_ERROR) {
-            printf("Receive failed: %d\n", WSAGetLastError());
-        }
+        numbytes = Recv();
         
         bytesRemaining += numbytes;
         
         while(bytesRemaining > 0) {
-            // printf("Message: %d\n", msgNum);
             memcpy(msgBuf, recbuf + msg_idx, 17);
             
             // TODO: make deserialize CAN message func
@@ -425,7 +409,7 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
 
 CANStatus TCPBridgeDevice::GetCANStatus()
 {
-    std::cout << "Get status!" << std::endl;
+    // TODO: Should this do something?
     return CANStatus::kOk;
 }
 

@@ -33,13 +33,13 @@
 #include <locale>
 #include <codecvt>
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include "rev/Drivers/TCPBridge/TCPBridgeDeviceThread.h"
+// #include "rev/Drivers/TCPBridge/TCPBridgeDeviceThread.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
+
+#include <asio.hpp>
+using asio::ip::tcp;
 
 namespace rev {
 namespace usb {
@@ -47,7 +47,7 @@ namespace usb {
 class TCPBridgeDevice : public rev::usb::CANDevice {
 public:
     TCPBridgeDevice() =delete;
-    TCPBridgeDevice(std::string ip);
+    TCPBridgeDevice(const std::string ip, const unsigned short port);
     virtual ~TCPBridgeDevice();
 
     virtual std::string GetName() const;
@@ -67,14 +67,12 @@ public:
 
     virtual bool Connect();
 private:
-    // candle_handle m_handle;
-    struct sockaddr_in m_handle;
-    SOCKET sockfd;
-    SOCKET ConnectSocket;
-    
-    // TCPBridgeDeviceThread m_thread;
-    std::string m_ip;
-    std::string m_port;
+    asio::ip::address m_ip;
+    const unsigned short m_port;
+
+    asio::io_service m_ioservice;
+    tcp::socket m_sock;
+
     std::wstring m_descriptor;
     std::string m_name;
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -83,12 +81,14 @@ private:
     char recbuf[1024];
     uint8_t msgBuf[30];
 
-    int parse_stream_res(uint8_t *buf, uint32_t* num_messages);
-    int check_packet(uint8_t *buf, int *packet_size);
+    int ParseStreamResponse(uint32_t* num_messages);
+    int CheckPacket(int *packet_size);
     void SerializeOpenStreamMessage(CANBridge_CANFilter filter, uint32_t maxSize);
     void SerializeReadStreamMessage(uint32_t messagesToRead);
     void SerializeRecieveCANMessage(uint32_t messageID, uint32_t messageMask);
-    void serialize_send_msg_packet(const CANMessage& msg, int periodMs);
+    void SerializeSendMsgPacket(const CANMessage& msg, int periodMs);
+    bool Send(uint8_t*, size_t);
+    size_t Recv();
 };
 
 } // namespace usb
