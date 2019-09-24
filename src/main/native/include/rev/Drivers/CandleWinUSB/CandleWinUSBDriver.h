@@ -39,7 +39,7 @@ namespace usb {
 class CandleWinUSBDriver : public CANDriver {
 public:
     CandleWinUSBDriver() {}
-    ~CandleWinUSBDriver() {}
+    ~CandleWinUSBDriver() override {}
 
     virtual std::string GetName() const {return "Candle WINUSB";}
 

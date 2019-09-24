@@ -63,7 +63,10 @@
 			"xtree": "cpp",
 			"xutility": "cpp",
 			"array": "cpp",
-			"iterator": "cpp"
+			"iterator": "cpp",
+			"cstdarg": "cpp",
+			"fstream": "cpp",
+			"sstream": "cpp"
 		},
 		"java.configuration.updateBuildConfiguration": "disabled"
 	}

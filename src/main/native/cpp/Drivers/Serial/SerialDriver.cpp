@@ -30,8 +30,9 @@
 
 #include "rev/Drivers/Serial/SerialDriver.h"
 #include "rev/Drivers/Serial/SerialDevice.h"
+#include "rev/CANBridgeUtils.h"
 
-#include "rev/Drivers/Serial/serial.h"
+#include "serial/serial.h"
 
 #include <map>
 #include <iostream>
@@ -45,11 +46,12 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
     // Search driver layer for devices
     std::vector<CANDeviceDetail> retval;
 
-    std::vector<serial::PortInfo> found  = serial::list_ports();
+    std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-            std::wstring desc(dev.hardware_id.c_str());
-            std::string name(dev.port.c_str());
-            retval.push_back({desc, name, this->GetName()});
+            std::wstring desc;
+            convert_string_to_wstring(dev.hardware_id.c_str(), desc);
+            std::string name(dev.port.c_str()); // SPARK MAX
+            retval.push_back({desc, name, this->GetName()}); // SPARK MAX Legacy
     }
 
     return retval;
@@ -59,11 +61,12 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const wchar_
 {
     // Search driver layer for devices
    
-    std::vector<serial::PortInfo> found  = serial::list_ports();
+    std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-            std::wstring path(dev.hardware_id.c_str());
+            std::wstring path;
+            convert_string_to_wstring(dev.hardware_id.c_str(), path);
             if (path == std::wstring(descriptor)) {
-                return std::make_unique<SerialDevice>(dev);
+                return std::make_unique<SerialDevice>(dev.port);
             }
     }
 

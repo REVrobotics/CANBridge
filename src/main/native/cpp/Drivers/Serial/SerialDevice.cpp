@@ -36,9 +36,7 @@
 #include <mockdata/CanData.h>
 #include <hal/CAN.h>
 
-#include "rev/Drivers/Serial/serial.h"
-
-
+#include "serial/serial.h"
 
 namespace rev {
 namespace usb {
@@ -49,8 +47,8 @@ SerialDevice::SerialDevice(std::string port) :
     m_device = new serial::Serial(port, 9600, serial::Timeout::simpleTimeout(1000));
 
     try {
-        if (!m_device.isOpen()) {
-            m_device.open();
+        if (!m_device->isOpen()) {
+            m_device->open();
         }
     } catch(const std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -58,8 +56,8 @@ SerialDevice::SerialDevice(std::string port) :
     }
    
     
-    m_descriptor = std::wstring()
-    m_name = m_device.getPort();
+    m_descriptor = std::wstring();
+    m_name = m_device->getPort();
     m_thread.Start();
 }
 

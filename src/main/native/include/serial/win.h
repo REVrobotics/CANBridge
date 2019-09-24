@@ -36,10 +36,10 @@
 
 #if defined(_WIN32)
 
-#ifndef SERIAL_IMPL_WINDOWS_H
-#define SERIAL_IMPL_WINDOWS_H
+#ifndef SERIAL_WINDOWS_H
+#define SERIAL_WINDOWS_H
 
-#include "serial/serial.h"
+#include "serial.h"
 
 #include "windows.h"
 

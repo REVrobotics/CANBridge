@@ -60,7 +60,7 @@ public:
 
     virtual bool IsConnected();
 private:
-    serial::Serial m_device;
+    serial::Serial* m_device;
     SerialDeviceThread m_thread;
     std::wstring m_descriptor;
     std::string m_name;

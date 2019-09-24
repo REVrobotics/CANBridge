@@ -9,12 +9,12 @@
 # define alloca __builtin_alloca
 #endif
 
-#include "serial/serial.h"
+#include "serial.h"
 
 #ifdef _WIN32
-#include "rev/Drivers/Serial/win.h"
+#include "win.h"
 #else
-#include "rev/Drivers/Serial/unix.h"
+#include "unix.h"
 #endif
 
 using std::invalid_argument;
@@ -139,7 +139,7 @@ Serial::read (std::vector<uint8_t> &buffer, size_t size)
   }
   catch (const std::exception &e) {
     delete[] buffer_;
-    throw;
+    throw e;
   }
 
   buffer.insert (buffer.end (), buffer_, buffer_+bytes_read);
@@ -158,7 +158,7 @@ Serial::read (std::string &buffer, size_t size)
   }
   catch (const std::exception &e) {
     delete[] buffer_;
-    throw;
+    throw e;
   }
   buffer.append (reinterpret_cast<const char*>(buffer_), bytes_read);
   delete[] buffer_;

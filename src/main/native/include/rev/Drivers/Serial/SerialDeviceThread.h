@@ -45,7 +45,7 @@
 #include "rev/CANBridgeUtils.h"
 #include "utils/CircularBuffer.h"
 
-#include "serial.h"
+#include "serial/serial.h"
 
 #include <mockdata/CanData.h>
 #include <hal/CAN.h>

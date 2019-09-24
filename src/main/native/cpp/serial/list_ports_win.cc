@@ -7,13 +7,20 @@
  * http://opensource.org/licenses/MIT
  */
 
-#include "serial/serial.h"
+#include "serial.h"
 #include <tchar.h>
 #include <windows.h>
 #include <setupapi.h>
 #include <initguid.h>
 #include <devguid.h>
 #include <cstring>
+
+#ifdef _MSC_VER
+#pragma comment(lib, "winusb.lib")
+#pragma comment(lib, "setupapi.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "advapi32.lib")
+#endif
 
 using serial::PortInfo;
 using std::vector;

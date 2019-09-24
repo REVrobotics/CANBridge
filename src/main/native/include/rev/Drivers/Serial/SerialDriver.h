@@ -39,12 +39,12 @@ namespace usb {
 class SerialDriver : public CANDriver {
 public:
     SerialDriver() {}
-    ~SerialDriver() {}
+    virtual ~SerialDriver() override {}
 
     virtual std::string GetName() const {return "Serial Port";}
 
-    virtual std::vector<CANDeviceDetail> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
+    virtual std::vector<CANDeviceDetail> GetDevices() override;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) override;
 };
 
 } // namespace usb

@@ -41,6 +41,11 @@ void convert_wstring_to_string(const std::wstring& in, std::string& out)
     out = converter.to_bytes(in.c_str());
 }
 
+void convert_string_to_wstring(const std::string& in, std::wstring& out) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    out = converter.from_bytes(in.c_str());
+}
+
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
 {
     bool result = (filter.messageMask & id) == (filter.messageMask & filter.messageId); 
