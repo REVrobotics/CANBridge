@@ -41,7 +41,7 @@ public:
     SerialDriver() {}
     virtual ~SerialDriver() override {}
 
-    virtual std::string GetName() const {return "Serial Port";}
+    virtual std::string GetName() const {return "Legacy";}
 
     virtual std::vector<CANDeviceDetail> GetDevices() override;
     virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) override;

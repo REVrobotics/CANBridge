@@ -44,6 +44,7 @@
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
 #include "utils/CircularBuffer.h"
+#include "rev/CANStatus.h"
 
 #include "serial/serial.h"
 
@@ -85,10 +86,24 @@ public:
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs)
     {
+        
+        try {
+            if (!m_device.isOpen()) {
+                m_device.open();
+                std::cout << "Successfully opened the COM port" << std::endl;
+            } else {
+                std::cout << "COM port already open" << std::endl;
+            }
+        } catch(const std::exception& e) {
+            std::cout << e.what() << std::endl;
+            throw "Failed to open device!";
+        }
+   
         //m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
     ~SerialDeviceThread()
     {
+        m_device.close();
     }
 
     void Start() {
@@ -123,15 +138,19 @@ public:
         return true;
     }
 
-    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize) {
+    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) {
         m_streamMutex.lock();
 
-        // Create the handle
-        *handle = counter++;
+        if (m_device.isOpen()) {
+            // Create the handle
+            *handle = counter++;
 
-        // Add to the map
-        m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
-
+            // Add to the map
+            m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
+        } else {
+            *status = CANStatus::kError;
+        }
+        
         m_streamMutex.unlock();
     }
 
@@ -189,14 +208,44 @@ private:
     long long m_threadIntervalMs;
 
     void run() {
-        //std::cout << "Thread starting!" << std::endl;
 
         while (m_threadComplete == false) {
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
-
+            
             // 1) Handle all recieved CAN traffic
             bool reading = true;
+            m_device.flush();
             while (reading) {
+
+                static const size_t bufferSize = 12;
+                // uint8_t buffer[bufferSize];
+                // uint8_t data[bufferSize]; // 12 bytes of data
+                std::string in = "test in";
+
+                try {
+                    // size_t bytesWritten = m_device.write(data, bufferSize);
+                    size_t bytesWritten = m_device.write(in);
+
+                    // Can throw error
+                    // size_t bytesRead = m_device.read(buffer, bufferSize);
+                    std::string bytesRead = m_device.read(in.length());
+
+                    // if (bytesRead != bufferSize || bytesWritten != bufferSize) {
+                        std::cout << ">> " << bytesWritten << " bytes written" << std::endl;
+                        // std::cout << ">> " << bytesRead << " bytes read" << std::endl;
+                    // }
+
+                    // if (bytesRead == bufferSize) {
+                        std::cout << ">> read: " << bytesRead << "\t" << bytesRead.length() << std::endl;
+                        // for (int i = 0; i < bufferSize; i++) {
+                            // std::cout << buffer[i] << "x";
+                        // }
+                        // std::cout << "\n";
+                    // }
+
+                } catch(const std::exception& e) {
+                    std::cout << e.what() << std::endl;
+                }
                 // candle_frame_t incomingFrame;
                 // incomingFrame.can_id = 19088743;
                 // for (int i = 0; i < 8; i++) {

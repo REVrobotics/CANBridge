@@ -37,9 +37,22 @@
 #include <map>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 namespace rev {
 namespace usb {
+
+static int ParseSerialPort(const std::string& in) {
+    if(!in.empty()) {
+        std::string num = in.substr(3, in.length());
+        std::cout << "in: " << in << "\tnum: " << num << std::endl;
+        if (!num.empty()) {
+            return std::stoi(num);
+        }
+    } 
+
+    return -1;
+}
 
 std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 {
@@ -48,10 +61,12 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
+        if (ParseSerialPort(dev.port) != -1) {
             std::wstring desc;
-            convert_string_to_wstring(dev.hardware_id.c_str(), desc);
-            std::string name(dev.port.c_str()); // SPARK MAX
-            retval.push_back({desc, name, this->GetName()}); // SPARK MAX Legacy
+            convert_string_to_wstring(dev.port, desc);
+            std::string name("SPARK MAX"); 
+            retval.push_back({desc, name, this->GetName()}); 
+        }
     }
 
     return retval;
@@ -64,7 +79,7 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const wchar_
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
             std::wstring path;
-            convert_string_to_wstring(dev.hardware_id.c_str(), path);
+            convert_string_to_wstring(dev.port, path);
             if (path == std::wstring(descriptor)) {
                 return std::make_unique<SerialDevice>(dev.port);
             }
@@ -72,6 +87,8 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const wchar_
 
     return std::unique_ptr<CANDevice>();
 }
+
+
 
 } // namespace usb
 } // namespace rev

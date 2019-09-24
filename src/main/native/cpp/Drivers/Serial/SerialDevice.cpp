@@ -43,29 +43,18 @@ namespace usb {
 
 SerialDevice::SerialDevice(std::string port) :
     m_thread(port)
-{
-    m_device = new serial::Serial(port, 9600, serial::Timeout::simpleTimeout(1000));
-
-    try {
-        if (!m_device->isOpen()) {
-            m_device->open();
-        }
-    } catch(const std::exception& e) {
-        std::cout << e.what() << std::endl;
-        throw "Failed to open device!";
-    }
-   
-    
+{  
+    std::cout << "serial device created" << std::endl;
     m_descriptor = std::wstring();
-    m_name = m_device->getPort();
+    convert_string_to_wstring(port, m_descriptor);
+    m_name = "SPARK MAX";
     m_thread.Start();
+
 }
 
 SerialDevice::~SerialDevice()
 {
     m_thread.Stop();
-    
-
 }
 
 std::string SerialDevice::GetName() const
@@ -118,9 +107,10 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
 CANStatus SerialDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
 {
     // Register the stream with the correct buffer size
-    m_thread.OpenStream(sessionHandle, filter, maxSize);
+    CANStatus stat = CANStatus::kOk;
+    m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
     
-    return CANStatus::kOk;
+    return stat;
 }
 CANStatus SerialDevice::CloseStreamSession(uint32_t sessionHandle)
 {
