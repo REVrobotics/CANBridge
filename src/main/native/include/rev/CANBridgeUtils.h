@@ -55,6 +55,8 @@ namespace usb {
 
     bool CANMessageCompare(CANMessage& a, CANMessage& b);
 
+    int parse_serial_com_port(const std::string& in);
+
 } // namespace rev
 } // namespace usb
 

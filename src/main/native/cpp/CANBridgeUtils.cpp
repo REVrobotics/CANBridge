@@ -58,5 +58,16 @@ bool CANMessageCompare(CANMessage& a, CANMessage& b)
     return a.GetTimestampUs() > b.GetTimestampUs();
 }
 
+int parse_serial_com_port(const std::string& in) {
+    if(!in.empty()) {
+        std::string num = in.substr(3, in.length());
+        if (!num.empty()) {
+            return std::stoi(num);
+        }
+    } 
+
+    return -1;
+}
+
 }
 }

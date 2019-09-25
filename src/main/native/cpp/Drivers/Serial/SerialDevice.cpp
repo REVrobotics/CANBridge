@@ -44,7 +44,6 @@ namespace usb {
 SerialDevice::SerialDevice(std::string port) :
     m_thread(port)
 {  
-    std::cout << "serial device created" << std::endl;
     m_descriptor = std::wstring();
     convert_string_to_wstring(port, m_descriptor);
     m_name = "SPARK MAX";

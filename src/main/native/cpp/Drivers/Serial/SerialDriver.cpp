@@ -42,17 +42,7 @@
 namespace rev {
 namespace usb {
 
-static int ParseSerialPort(const std::string& in) {
-    if(!in.empty()) {
-        std::string num = in.substr(3, in.length());
-        std::cout << "in: " << in << "\tnum: " << num << std::endl;
-        if (!num.empty()) {
-            return std::stoi(num);
-        }
-    } 
 
-    return -1;
-}
 
 std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 {
@@ -61,7 +51,7 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-        if (ParseSerialPort(dev.port) != -1) {
+        if (parse_serial_com_port(dev.port) != -1) {
             std::wstring desc;
             convert_string_to_wstring(dev.port, desc);
             std::string name("SPARK MAX"); 

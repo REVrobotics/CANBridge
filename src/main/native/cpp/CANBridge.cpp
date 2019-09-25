@@ -266,7 +266,6 @@ void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId
                 dev.messageId = messageId;
                 dev.messageMask = messageMask;
                 CANDeviceList.push_back(std::make_pair(driver->CreateDeviceFromDescriptor(descriptor), dev));
-                std::cout << "properly registered" << std::endl;
                 return;
             }
         }

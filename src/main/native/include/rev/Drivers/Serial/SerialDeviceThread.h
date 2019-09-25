@@ -82,24 +82,29 @@ class SerialDeviceThread {
 public:
     SerialDeviceThread() =delete;
     SerialDeviceThread(std::string port, long long threadIntervalMs = 1) : 
-        m_device(port, 9600, serial::Timeout::simpleTimeout(1000)), // TODO fix this so it's pass by reference or something safer
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs)
     {
-        
+        serial::Timeout timeout = serial::Timeout::simpleTimeout(100);
+        m_device.setPort(port);
+        m_device.setBaudrate(115200);
+        m_device.setTimeout(timeout);
+        m_device.setBytesize(serial::bytesize_t::eightbits);
+        m_device.setParity(serial::parity_t::parity_even);
+        m_device.setStopbits(serial::stopbits_t::stopbits_one);
+        m_device.setFlowcontrol(serial::flowcontrol_t::flowcontrol_none);
+
         try {
             if (!m_device.isOpen()) {
                 m_device.open();
-                std::cout << "Successfully opened the COM port" << std::endl;
             } else {
-                std::cout << "COM port already open" << std::endl;
+                std::cout << "COM port " << port << " already open" << std::endl;
             }
         } catch(const std::exception& e) {
             std::cout << e.what() << std::endl;
             throw "Failed to open device!";
         }
    
-        //m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
     ~SerialDeviceThread()
     {
@@ -144,6 +149,13 @@ public:
         if (m_device.isOpen()) {
             // Create the handle
             *handle = counter++;
+            
+            uint8_t buffer[bufferSize] = {0x07, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x2};
+
+            size_t bytesWritten = m_device.write(buffer, bufferSize);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
 
             // Add to the map
             m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
@@ -165,12 +177,10 @@ public:
     void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, uint32_t* messagesRead) {
         m_streamMutex.lock();
         *messagesRead = m_recvStream[handle]->messages.GetCount(); // first before remove
-
         for (uint32_t i = 0; i < *messagesRead; i++) {
             CANMessage m;
             if (m_recvStream[handle]->messages.Remove(m)) {
                 messages[i] = ConvertCANRecieveToHALMessage(m);
-
             }
         }
         m_streamMutex.unlock();
@@ -184,7 +194,6 @@ public:
         halMsg.messageID = msg.GetMessageId();
         halMsg.dataSize = msg.GetSize();
         memcpy(halMsg.data, msg.GetData(), sizeof(halMsg.data));
-
         return halMsg;
     }
 
@@ -207,6 +216,9 @@ private:
 
     long long m_threadIntervalMs;
 
+    static const size_t bufferSize = 12;
+
+
     void run() {
 
         while (m_threadComplete == false) {
@@ -217,64 +229,53 @@ private:
             m_device.flush();
             while (reading) {
 
-                static const size_t bufferSize = 12;
-                // uint8_t buffer[bufferSize];
-                // uint8_t data[bufferSize]; // 12 bytes of data
-                std::string in = "test in";
-
+                uint8_t data[bufferSize] = {0}; // 12 bytes of data
                 try {
-                    // size_t bytesWritten = m_device.write(data, bufferSize);
-                    size_t bytesWritten = m_device.write(in);
 
-                    // Can throw error
-                    // size_t bytesRead = m_device.read(buffer, bufferSize);
-                    std::string bytesRead = m_device.read(in.length());
+                    size_t bytesRead = m_device.read(data, bufferSize);
 
-                    // if (bytesRead != bufferSize || bytesWritten != bufferSize) {
-                        std::cout << ">> " << bytesWritten << " bytes written" << std::endl;
-                        // std::cout << ">> " << bytesRead << " bytes read" << std::endl;
-                    // }
+                    if (bytesRead == bufferSize) {
+                        std::string hexStr = std::string("0x0") + std::to_string((data[3] * 1000000 + data[2] * 10000 + data[1] * 100 + data[0]));
+                        std::stringstream ss;
+                        ss << std::hex << hexStr;
+                        uint32_t msgId;
+                        ss >> msgId;
 
-                    // if (bytesRead == bufferSize) {
-                        std::cout << ">> read: " << bytesRead << "\t" << bytesRead.length() << std::endl;
-                        // for (int i = 0; i < bufferSize; i++) {
-                            // std::cout << buffer[i] << "x";
-                        // }
-                        // std::cout << "\n";
-                    // }
+                        if (msgId != 0x0) {
+                            uint8_t msgData[8];
+                            memcpy(msgData, data+4, 8*sizeof(uint8_t));
+                            CANMessage msg(msgId, msgData, 8);
 
+                            m_recvMutex.lock();
+                            if (msg.GetSize() != 0) {
+                                m_recvStore[data[0]] = msg;
+                            }
+                            m_recvMutex.unlock();
+
+                            m_streamMutex.lock();
+                            for (auto& stream : m_recvStream) {
+                                // Compare current size of the buffer to the max size of the buffer
+                                if (!stream.second->messages.IsFull()
+                                    && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                                    msg.GetMessageId())) {
+                                    stream.second->messages.Add(msg);
+                                }
+                            }
+                            m_streamMutex.unlock();
+                            reading = false;
+
+                        }
+                    } else {
+                        reading = false;
+
+                    }
+
+
+                    
                 } catch(const std::exception& e) {
                     std::cout << e.what() << std::endl;
                 }
-                // candle_frame_t incomingFrame;
-                // incomingFrame.can_id = 19088743;
-                // for (int i = 0; i < 8; i++) {
-                //     incomingFrame.data[i] = 9;
-                // }
-                // reading = candle_frame_read(m_device, &incomingFrame, 0);
-
-                // // Recieved a new frame, store it
-                // if (reading) {
-                //     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
-                    
-                //     // TODO: The queue is for streaming API, implement that here
-                //     m_recvMutex.lock();
-                //     if (msg.GetSize() != 0) {
-                //         m_recvStore[incomingFrame.can_id] = msg;
-                //     }
-                //     m_recvMutex.unlock();
-
-                //     m_streamMutex.lock();
-                //     for (auto& stream : m_recvStream) {
-                //         // Compare current size of the buffer to the max size of the buffer
-                //         if (!stream.second->messages.IsFull()
-                //             && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                //             msg.GetMessageId())) {
-                //             stream.second->messages.Add(msg);
-                //         }
-                //     }
-                //     m_streamMutex.unlock();
-                // }
+                
             }
 
             // 2) Schedule CANMessage queue
