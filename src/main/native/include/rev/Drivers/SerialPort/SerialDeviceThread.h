@@ -46,6 +46,8 @@
 #include "utils/CircularBuffer.h"
 #include "rev/CANStatus.h"
 
+#include "SerialMessage.h"
+
 #include "serial/serial.h"
 
 #include <mockdata/CanData.h>
@@ -150,7 +152,7 @@ public:
             // Create the handle
             *handle = counter++;
             
-            uint8_t buffer[bufferSize] = {0x07, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+            uint8_t buffer[bufferSize] = {0x00, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 
@@ -239,7 +241,9 @@ private:
                         uint32_t msgId;
                         ss >> msgId;
 
-                        if (msgId != 0x0 && msgId >= 0x0205c000 || msgId == 0x02050000) {
+                        if (msgId != 0x0 ) {
+                            std::cout << std::dec << ">> r msg ids: " << hexStr << std::endl;
+
                             uint8_t msgData[8];
                             memcpy(msgData, data+4, 8*sizeof(uint8_t));
                             CANMessage msg(msgId, msgData, 8);
@@ -283,12 +287,22 @@ private:
 
                 auto now = std::chrono::steady_clock::now();
 
-                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (el.m_msg.GetMessageId() >= 0x0205c000 || el.m_msg.GetMessageId() == 0x0205000)) {
+                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && IsValidSerialMessageId(el.m_msg.GetApiId())) {
+                    
+                    uint32_t msgId = el.m_msg.GetMessageId();
                     uint8_t idBuffer[4];
-                    std::cout << std::hex << ">> msg ids: " << el.m_msg.GetMessageId() << std::endl;
+                    idBuffer[0] = (msgId & 0x000000ff);
+                    idBuffer[1] = (msgId & 0x0000ff00) >> 8;
+                    idBuffer[2] = (msgId & 0x00ff0000) >> 16;
+                    idBuffer[3] = (msgId & 0xff000000) >> 24;
 
-                    uint32_t msgId = _byteswap_ulong(el.m_msg.GetMessageId());
-                    memcpy(idBuffer, &msgId, sizeof(uint8_t)*4);
+                    // uint32_t msgId = _byteswap_ulong(el.m_msg.GetMessageId());
+                    // memcpy(idBuffer, &msgId, sizeof(msgId));
+                    std::cout << std::hex << ">> s msg ids: " << msgId << std::endl;
+                    for (int i = 0; i < 4; i++) {
+                        std::cout << std::hex << (int)idBuffer[i] << "_";
+                    }
+                    std::cout << "\n";
 
                     uint8_t dataBuffer[8];
                     memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
@@ -296,6 +310,10 @@ private:
                     uint8_t buffer[bufferSize];
                     std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
 
+                    // for (int i = 0; i < bufferSize; i++) {
+                    //     std::cout << buffer[i] << "_";
+                    // }
+                    // std::cout << "\n";
                     // TODO: Feed back an error
                     size_t bytesWritten = m_device.write(buffer, bufferSize);
 

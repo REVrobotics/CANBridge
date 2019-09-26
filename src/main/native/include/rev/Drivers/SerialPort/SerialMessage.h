@@ -26,63 +26,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
+#pragma once
 
-#include "rev/Drivers/SerialPort/SerialDriver.h"
-#include "rev/Drivers/SerialPort/SerialDevice.h"
-#include "rev/CANBridgeUtils.h"
-
-#include "serial/serial.h"
-
-#include <map>
+#include <stdint.h>
 #include <iostream>
-#include <memory>
-#include <sstream>
 
-namespace rev {
-namespace usb {
+bool IsValidSerialMessageId(uint16_t apiId);
 
-
-
-std::vector<CANDeviceDetail> SerialDriver::GetDevices()
-{
-    // Search driver layer for devices
-    std::vector<CANDeviceDetail> retval;
-
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-        if (parse_serial_com_port(dev.port) != -1) {
-            std::wstring desc;
-            convert_string_to_wstring(dev.port, desc);
-            std::string name("SPARK MAX"); 
-            retval.push_back({desc, name, this->GetName()}); 
-        }
-    }
-
-    return retval;
-}
-
-std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
-{
-    // Search driver layer for devices
-   
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-            std::wstring path;
-            convert_string_to_wstring(dev.port, path);
-            if (path == std::wstring(descriptor)) {
-                return std::make_unique<SerialDevice>(dev.port);
-            }
-    }
-
-    return std::unique_ptr<CANDevice>();
-}
-
-
-
-} // namespace usb
-} // namespace rev
-
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32

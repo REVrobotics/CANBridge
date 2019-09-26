@@ -28,7 +28,7 @@
 
 #ifdef _WIN32
 
-#include "rev/Drivers/Serial/SerialDevice.h"
+#include "rev/Drivers/SerialPort/SerialDevice.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -88,7 +88,6 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
     std::map<uint32_t, CANMessage> messages;
     m_thread.RecieveMessage(messages);
     CANMessage mostRecent;
-    std::cout << "recieved " << messages.size() << " msgs" << std::endl;
     for (auto& m : messages) {
         if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
             mostRecent = m.second;

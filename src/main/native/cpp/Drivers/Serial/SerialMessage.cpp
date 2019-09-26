@@ -26,44 +26,55 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <stdint.h>
+#include <iostream>
 
-#include <map>
-#include <string>
+#include "rev/Drivers/SerialPort/SerialMessage.h"
 
-#include "rev/Drivers/Serial/SerialDeviceThread.h"
-#include "rev/CANDevice.h"
-#include "rev/CANMessage.h"
-#include "rev/CANStatus.h"
+// Constant defines of valid message IDS for the serial communication
+const int CMD_API_CLEAR_FAULTS = 0x06E;
+const int CMD_API_DRV_STAT = 0x06A;
+const int CMD_API_BURN_FLASH = 0x072;
+const int CMD_API_SET_FOLLOWER = 0x073;
+const int CMD_API_FACTORY_DEFAULT = 0x074;
+const int CMD_API_FACTORY_RESET = 0x075;
 
-namespace rev {
-namespace usb {
+const int CMD_API_FIRMWARE = 0x098;
 
-class SerialDevice : public CANDevice {
-public:
-    SerialDevice() =delete;
-    SerialDevice(std::string port);
-    virtual ~SerialDevice();
+const int CMD_API_SWDL_BOOTLOADER = 0x1FF;
+const int CMD_API_SWDL_DATA = 0x09C;
+const int CMD_API_SWDL_CHKSUM = 0x09D;
+const int CMD_API_SWDL_RETRANSMIT = 0x09E;
 
-    virtual std::string GetName() const;
-    virtual std::wstring GetDescriptor() const;
+const int CMD_API_PARAM_ACCESS = 0x300;
 
-    virtual int GetId() const;
+const int ID_SIZE = 12;
 
-    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask) override;
-    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
-    virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
-    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status);
+const int ValidIds[ID_SIZE] = {
+    CMD_API_CLEAR_FAULTS,
+    CMD_API_DRV_STAT,
+    CMD_API_BURN_FLASH,
+    CMD_API_SET_FOLLOWER,
+    CMD_API_FACTORY_DEFAULT,
+    CMD_API_FACTORY_RESET,
+    
+    CMD_API_FIRMWARE,
 
-    virtual CANStatus GetCANStatus();
+    CMD_API_SWDL_BOOTLOADER,
+    CMD_API_SWDL_DATA,
+    CMD_API_SWDL_CHKSUM,
+    CMD_API_SWDL_RETRANSMIT,
 
-    virtual bool IsConnected();
-private:
-    SerialDeviceThread m_thread;
-    std::wstring m_descriptor;
-    std::string m_name;
+    CMD_API_PARAM_ACCESS
 };
 
-} // namespace usb
-} // namespace rev
+bool IsValidSerialMessageId(uint16_t apiId) {
+
+    for (int i = 0; i < ID_SIZE; i++) {
+        if (ValidIds[i] == apiId) {
+            return true;
+        }
+    }
+
+    return false;
+}
