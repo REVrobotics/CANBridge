@@ -74,7 +74,6 @@ int SerialDevice::GetId() const
 
 CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-    auto data = msg.GetData();
    
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
@@ -89,9 +88,11 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
     std::map<uint32_t, CANMessage> messages;
     m_thread.RecieveMessage(messages);
     CANMessage mostRecent;
+    std::cout << "recieved " << messages.size() << " msgs" << std::endl;
     for (auto& m : messages) {
         if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
             mostRecent = m.second;
+            std::cout << "Status: OK" << std::endl;
             status = CANStatus::kOk;    
         }
     }

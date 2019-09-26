@@ -85,7 +85,7 @@ public:
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs)
     {
-        serial::Timeout timeout = serial::Timeout::simpleTimeout(100);
+        serial::Timeout timeout = serial::Timeout::simpleTimeout(5);
         m_device.setPort(port);
         m_device.setBaudrate(115200);
         m_device.setTimeout(timeout);
@@ -150,11 +150,11 @@ public:
             // Create the handle
             *handle = counter++;
             
-            uint8_t buffer[bufferSize] = {0x07, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x2};
+            uint8_t buffer[bufferSize] = {0x07, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 
             // Add to the map
@@ -228,10 +228,8 @@ private:
             bool reading = true;
             m_device.flush();
             while (reading) {
-
                 uint8_t data[bufferSize] = {0}; // 12 bytes of data
                 try {
-
                     size_t bytesRead = m_device.read(data, bufferSize);
 
                     if (bytesRead == bufferSize) {
@@ -241,7 +239,7 @@ private:
                         uint32_t msgId;
                         ss >> msgId;
 
-                        if (msgId != 0x0) {
+                        if (msgId != 0x0 && msgId >= 0x0205c000 || msgId == 0x02050000) {
                             uint8_t msgData[8];
                             memcpy(msgData, data+4, 8*sizeof(uint8_t));
                             CANMessage msg(msgId, msgData, 8);
@@ -263,19 +261,13 @@ private:
                             }
                             m_streamMutex.unlock();
                             reading = false;
-
                         }
                     } else {
                         reading = false;
-
                     }
-
-
-                    
                 } catch(const std::exception& e) {
                     std::cout << e.what() << std::endl;
                 }
-                
             }
 
             // 2) Schedule CANMessage queue
@@ -283,32 +275,43 @@ private:
             size_t queueSize = m_sendQueue.size();
 
             for (size_t i=0;i<queueSize;i++) {
-                // detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                // m_sendQueue.pop();
-                // if (el.m_intervalMs == -1) {
-                //     continue;
-                // }
+                detail::CANThreadSendQueueElement el = m_sendQueue.front();
+                m_sendQueue.pop();
+                if (el.m_intervalMs == -1) {
+                    continue;
+                }
 
-                // auto now = std::chrono::steady_clock::now();
+                auto now = std::chrono::steady_clock::now();
 
-                // if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
-                //     candle_frame_t frame;
-                //     frame.can_dlc = el.m_msg.GetSize();
-                //     frame.can_id = el.m_msg.GetMessageId();
-                //     memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
-                //     frame.timestamp_us = now.time_since_epoch().count() / 1000;
+                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (el.m_msg.GetMessageId() >= 0x0205c000 || el.m_msg.GetMessageId() == 0x0205000)) {
+                    uint8_t idBuffer[4];
+                    std::cout << std::hex << ">> msg ids: " << el.m_msg.GetMessageId() << std::endl;
 
-                //     // TODO: Feed back an error
-                //     if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                //         std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
-                //     }
-                // }
+                    uint32_t msgId = _byteswap_ulong(el.m_msg.GetMessageId());
+                    memcpy(idBuffer, &msgId, sizeof(uint8_t)*4);
 
-                // // Return to queue if repeated
-                // if (el.m_intervalMs > 0 ) {
-                //     el.m_prevTimestamp = now;
-                //     m_sendQueue.push(el);
-                // }
+                    uint8_t dataBuffer[8];
+                    memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
+
+                    uint8_t buffer[bufferSize];
+                    std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
+
+                    // TODO: Feed back an error
+                    size_t bytesWritten = m_device.write(buffer, bufferSize);
+
+                    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    if (bytesWritten != bufferSize) {
+                        std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
+                    } else {
+                        std::cout << "Message sent" << std::endl;
+                    }
+                }
+
+                // Return to queue if repeated
+                if (el.m_intervalMs > 0 ) {
+                    el.m_prevTimestamp = now;
+                    m_sendQueue.push(el);
+                }
             }
 
             m_sendMutex.unlock();
