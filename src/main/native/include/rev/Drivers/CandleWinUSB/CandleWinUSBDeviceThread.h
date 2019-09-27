@@ -207,8 +207,8 @@ private:
                 // Recieved a new frame, store it
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
-                    
-                    // TODO: The queue is for streaming API, implement that here
+
+                    // The queue is for streaming API, implement that here
                     m_recvMutex.lock();
                     if (msg.GetSize() != 0) {
                         m_recvStore[incomingFrame.can_id] = msg;

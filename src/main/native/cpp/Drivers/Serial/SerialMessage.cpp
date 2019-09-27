@@ -46,9 +46,9 @@ const int CMD_API_SWDL_DATA = 0x09C;
 const int CMD_API_SWDL_CHKSUM = 0x09D;
 const int CMD_API_SWDL_RETRANSMIT = 0x09E;
 
-const int CMD_API_PARAM_ACCESS = 0x300;
-
 const int ID_SIZE = 12;
+
+
 
 const int ValidIds[ID_SIZE] = {
     CMD_API_CLEAR_FAULTS,
@@ -70,11 +70,24 @@ const int ValidIds[ID_SIZE] = {
 
 bool IsValidSerialMessageId(uint16_t apiId) {
 
-    for (int i = 0; i < ID_SIZE; i++) {
+    for (int i = 0; i < ID_SIZE - 1; i++) {
         if (ValidIds[i] == apiId) {
             return true;
         }
     }
+    
+    return false;
+}
+
+bool IsConfigParameter(uint16_t apiId) {
+    if (apiId > CMD_API_PARAM_ACCESS) {
+        return true;
+    }
 
     return false;
 }
+
+bool IsLegacyGetParam(uint32_t msgId) {
+    return ((msgId & GET_CONFIG_PARAM) == GET_CONFIG_PARAM) || ((msgId & SET_CONFIG_PARAM) == SET_CONFIG_PARAM);
+}
+

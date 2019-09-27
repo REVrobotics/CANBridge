@@ -31,5 +31,11 @@
 #include <stdint.h>
 #include <iostream>
 
+const int CMD_API_PARAM_ACCESS = 0x300;
+const int SET_CONFIG_PARAM = 0x02051C00;
+const int GET_CONFIG_PARAM = 0x02051C40;
+
 bool IsValidSerialMessageId(uint16_t apiId);
+bool IsConfigParameter(uint16_t apiId);
+bool IsLegacyGetParam(uint32_t msgId);
 

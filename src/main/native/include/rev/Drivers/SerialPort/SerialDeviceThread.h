@@ -40,6 +40,7 @@
 #include <clocale>
 #include <iostream>
 #include <iterator>
+#include <iomanip>
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
@@ -87,7 +88,7 @@ public:
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs)
     {
-        serial::Timeout timeout = serial::Timeout::simpleTimeout(5);
+        serial::Timeout timeout = serial::Timeout::simpleTimeout(1);
         m_device.setPort(port);
         m_device.setBaudrate(115200);
         m_device.setTimeout(timeout);
@@ -156,7 +157,7 @@ public:
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 
             // Add to the map
@@ -235,22 +236,38 @@ private:
                     size_t bytesRead = m_device.read(data, bufferSize);
 
                     if (bytesRead == bufferSize) {
-                        std::string hexStr = std::string("0x0") + std::to_string((data[3] * 1000000 + data[2] * 10000 + data[1] * 100 + data[0]));
-                        std::stringstream ss;
-                        ss << std::hex << hexStr;
+
+                        std::stringstream msgStream;
+                        std::stringstream devStream;
                         uint32_t msgId;
-                        ss >> msgId;
+                        uint32_t devId;
+
+                        msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                                   << std::hex << (int)data[2] << std::setfill('0') << std::setw(2) << std::hex << (int)data[1]
+                                   << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];        
+                        msgStream >> msgId;
+                        devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                                   << std::hex << (int)data[2] << "0000";
+                        devStream >> devId;
+
 
                         if (msgId != 0x0 ) {
-                            std::cout << std::dec << ">> r msg ids: " << hexStr << std::endl;
 
                             uint8_t msgData[8];
-                            memcpy(msgData, data+4, 8*sizeof(uint8_t));
-                            CANMessage msg(msgId, msgData, 8);
+                            if (IsLegacyGetParam(msgId)) {
+                                memcpy(msgData, data+6, 6*sizeof(uint8_t));
+                                msgId = devId | ((CMD_API_PARAM_ACCESS | data[4]) << 6) | (msgId & 0x3F);
+                            } else {
+                                memcpy(msgData, data+4, 8*sizeof(uint8_t));
+                            }
 
+                            // std::cout << std::hex << ">> r msg ids: " <<  msgId <<  std::dec << std::endl;
+
+                            CANMessage msg(msgId, msgData, 8);
+                            
                             m_recvMutex.lock();
                             if (msg.GetSize() != 0) {
-                                m_recvStore[data[0]] = msg;
+                                m_recvStore[msgId] = msg;
                             }
                             m_recvMutex.unlock();
 
@@ -264,6 +281,7 @@ private:
                                 }
                             }
                             m_streamMutex.unlock();
+
                             reading = false;
                         }
                     } else {
@@ -286,26 +304,43 @@ private:
                 }
 
                 auto now = std::chrono::steady_clock::now();
+                uint32_t sentMsgId = el.m_msg.GetMessageId();
+                uint16_t apiId = el.m_msg.GetApiId();
 
-                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && IsValidSerialMessageId(el.m_msg.GetApiId())) {
+                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
                     
-                    uint32_t msgId = el.m_msg.GetMessageId();
                     uint8_t idBuffer[4];
-                    idBuffer[0] = (msgId & 0x000000ff);
-                    idBuffer[1] = (msgId & 0x0000ff00) >> 8;
-                    idBuffer[2] = (msgId & 0x00ff0000) >> 16;
-                    idBuffer[3] = (msgId & 0xff000000) >> 24;
+                    uint8_t dataBuffer[8];
 
+                    idBuffer[0] = (sentMsgId & 0x000000ff);
+                    idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
+                    idBuffer[3] = (sentMsgId & 0xff000000) >> 24;
+
+                    if (IsConfigParameter(apiId)) {
+                        uint32_t paramConfig;
+                        if (el.m_msg.IsEmpty()) {
+                            paramConfig = GET_CONFIG_PARAM;
+                        } else {
+                            paramConfig = SET_CONFIG_PARAM;
+                        }
+                        idBuffer[0] = (paramConfig & 0x000000ff);
+                        idBuffer[1] = (paramConfig & 0x0000ff00) >> 8;
+                        memcpy(dataBuffer + 2, el.m_msg.GetData(), sizeof(uint8_t)*6);
+                        dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
+                        dataBuffer[1] = 0;
+                    } else { 
+                        idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
+                        memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
+                        
+                    }
                     // uint32_t msgId = _byteswap_ulong(el.m_msg.GetMessageId());
                     // memcpy(idBuffer, &msgId, sizeof(msgId));
-                    std::cout << std::hex << ">> s msg ids: " << msgId << std::endl;
-                    for (int i = 0; i < 4; i++) {
-                        std::cout << std::hex << (int)idBuffer[i] << "_";
-                    }
-                    std::cout << "\n";
-
-                    uint8_t dataBuffer[8];
-                    memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
+                    
+                    // std::cout << std::hex << ">> s msg ids: " << sentMsgId << std::endl;
+                    // for (int i = 0; i < 8; i++) {
+                    //     std::cout << std::hex << (int)dataBuffer[i] << "_";
+                    // }
+                    // std::cout << "\n";
 
                     uint8_t buffer[bufferSize];
                     std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
@@ -321,7 +356,7 @@ private:
                     if (bytesWritten != bufferSize) {
                         std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
                     } else {
-                        std::cout << "Message sent" << std::endl;
+                        // std::cout << "Message sent" << std::endl;
                     }
                 }
 

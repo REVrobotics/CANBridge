@@ -91,7 +91,6 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
     for (auto& m : messages) {
         if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
             mostRecent = m.second;
-            std::cout << "Status: OK" << std::endl;
             status = CANStatus::kOk;    
         }
     }
