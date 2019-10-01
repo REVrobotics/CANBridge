@@ -242,18 +242,22 @@ private:
                         uint32_t msgId;
                         uint32_t devId;
 
+                        // Gets the full message ID
                         msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
                                    << std::hex << (int)data[2] << std::setfill('0') << std::setw(2) << std::hex << (int)data[1]
                                    << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];        
                         msgStream >> msgId;
+
+                        // Gets just the manufacturer and device type IDs
                         devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
                                    << std::hex << (int)data[2] << "0000";
                         devStream >> devId;
 
-
+                        // Make sure message ID isn't empty
                         if (msgId != 0x0 ) {
 
                             uint8_t msgData[8];
+                            // Check if parameter access
                             if (IsLegacyGetParam(msgId)) {
                                 memcpy(msgData, data+6, 6*sizeof(uint8_t));
                                 msgId = devId | ((CMD_API_PARAM_ACCESS | data[4]) << 6) | (msgId & 0x3F);
@@ -308,7 +312,7 @@ private:
                 uint16_t apiId = el.m_msg.GetApiId();
 
                 if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
-                    
+                    // Little endian
                     uint8_t idBuffer[4];
                     uint8_t dataBuffer[8];
 
@@ -316,40 +320,36 @@ private:
                     idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
                     idBuffer[3] = (sentMsgId & 0xff000000) >> 24;
 
+                    // Check to see if it's parameter access
                     if (IsConfigParameter(apiId)) {
                         uint32_t paramConfig;
+                        // If the message has empty data, then it's getting parameter value. Otherwise setting parameter value
                         if (el.m_msg.IsEmpty()) {
                             paramConfig = GET_CONFIG_PARAM;
                         } else {
                             paramConfig = SET_CONFIG_PARAM;
                         }
+
+                        // Need to change the id to have the right parameter access value
                         idBuffer[0] = (paramConfig & 0x000000ff);
                         idBuffer[1] = (paramConfig & 0x0000ff00) >> 8;
+
+                        // Only 5-6 bytes of data for parameter access, leave first 2 spots free for id and buffer 0
                         memcpy(dataBuffer + 2, el.m_msg.GetData(), sizeof(uint8_t)*6);
+
+                        // First data byte needs to be the parameter id, second one always needs to be a zero
                         dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
                         dataBuffer[1] = 0;
                     } else { 
+                        // If not parameter access, leave api ID as is 
                         idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
                         memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
                         
                     }
-                    // uint32_t msgId = _byteswap_ulong(el.m_msg.GetMessageId());
-                    // memcpy(idBuffer, &msgId, sizeof(msgId));
-                    
-                    // std::cout << std::hex << ">> s msg ids: " << sentMsgId << std::endl;
-                    // for (int i = 0; i < 8; i++) {
-                    //     std::cout << std::hex << (int)dataBuffer[i] << "_";
-                    // }
-                    // std::cout << "\n";
 
                     uint8_t buffer[bufferSize];
                     std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
 
-                    // for (int i = 0; i < bufferSize; i++) {
-                    //     std::cout << buffer[i] << "_";
-                    // }
-                    // std::cout << "\n";
-                    // TODO: Feed back an error
                     size_t bytesWritten = m_device.write(buffer, bufferSize);
 
                     // std::this_thread::sleep_for(std::chrono::milliseconds(500));
