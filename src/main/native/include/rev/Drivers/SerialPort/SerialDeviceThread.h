@@ -44,7 +44,6 @@
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
-#include "utils/CircularBuffer.h"
 #include "rev/CANStatus.h"
 
 #include "SerialMessage.h"
@@ -57,29 +56,6 @@
 namespace rev {
 namespace usb {
 
-struct CANStreamHandle {
-    uint32_t messageId;
-    uint32_t messageMask;
-    uint32_t maxSize;
-    utils::CircularBuffer<CANMessage> messages; 
-
-};
-
-namespace detail {
-
-class CANThreadSendQueueElement {
-public:
-    CANThreadSendQueueElement() =delete;
-    CANThreadSendQueueElement(CANMessage msg, int32_t intervalMs) : 
-        m_msg(msg), m_intervalMs(intervalMs), m_prevTimestamp(std::chrono::steady_clock::now()) {
-
-    }
-    CANMessage m_msg;
-    int32_t m_intervalMs;
-    std::chrono::time_point<std::chrono::steady_clock> m_prevTimestamp;
-};
-
-} // namespace detail
 
 class SerialDeviceThread { 
 public:
@@ -155,10 +131,9 @@ public:
             
             uint8_t buffer[bufferSize] = {0x00, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
-            size_t bytesWritten = m_device.write(buffer, bufferSize);
+            m_device.write(buffer, bufferSize);
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
 
             // Add to the map
             m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});

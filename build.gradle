@@ -119,7 +119,8 @@ model {
       binaries.all {
         lib library: "CandleLib", linkage: 'static'
         lib library: "SerialLib", linkage: 'static'
-        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
+        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio 
+            || it.targetPlatform.name == nativeUtils.wpi.platforms.raspbian) {
           it.buildable = false
         }
         // lib library: "SparkMaxDriver", linkage: 'shared'

@@ -35,27 +35,54 @@
 
 #include "rev/CANBridge.h"
 #include "rev/CANMessage.h"
+#include "utils/CircularBuffer.h"
 
 namespace rev {
 namespace usb {
-    class CANBridge_CANFilter {
-        public:
-        uint32_t messageId;
-        uint32_t messageMask;
 
-        friend bool operator<(const CANBridge_CANFilter& lhs, const CANBridge_CANFilter& rhs) {
-            return lhs.messageId < rhs.messageId && lhs.messageMask < rhs.messageMask;
-        }
-    };
+struct CANStreamHandle {
+    uint32_t messageId;
+    uint32_t messageMask;
+    uint32_t maxSize;
+    utils::CircularBuffer<CANMessage> messages; 
 
-    void convert_wstring_to_string(const std::wstring& in, std::string& out); 
-    void convert_string_to_wstring(const std::string& in, std::wstring& out);
+};
 
-    bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id); 
+namespace detail {
+    
+class CANThreadSendQueueElement {
+public:
+    CANThreadSendQueueElement() =delete;
+    CANThreadSendQueueElement(CANMessage msg, int32_t intervalMs) : 
+        m_msg(msg), m_intervalMs(intervalMs), m_prevTimestamp(std::chrono::steady_clock::now()) {
 
-    bool CANMessageCompare(CANMessage& a, CANMessage& b);
+    }
+    CANMessage m_msg;
+    int32_t m_intervalMs;
+    std::chrono::time_point<std::chrono::steady_clock> m_prevTimestamp;
+};
 
-    int parse_serial_com_port(const std::string& in);
+} // namespace detail
+
+class CANBridge_CANFilter {
+    public:
+    uint32_t messageId;
+    uint32_t messageMask;
+
+    friend bool operator<(const CANBridge_CANFilter& lhs, const CANBridge_CANFilter& rhs) {
+        return lhs.messageId < rhs.messageId && lhs.messageMask < rhs.messageMask;
+    }
+};
+
+
+void convert_wstring_to_string(const std::wstring& in, std::string& out); 
+void convert_string_to_wstring(const std::string& in, std::wstring& out);
+
+bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id); 
+
+bool CANMessageCompare(CANMessage& a, CANMessage& b);
+
+int parse_serial_com_port(const std::string& in);
 
 } // namespace rev
 } // namespace usb

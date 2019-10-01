@@ -43,7 +43,6 @@
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
-#include "utils/CircularBuffer.h"
 
 #include "candlelib/candle.h"
 
@@ -53,29 +52,6 @@
 namespace rev {
 namespace usb {
 
-struct CANStreamHandle {
-    uint32_t messageId;
-    uint32_t messageMask;
-    uint32_t maxSize;
-    utils::CircularBuffer<CANMessage> messages; 
-
-};
-
-namespace detail {
-
-class CANThreadSendQueueElement {
-public:
-    CANThreadSendQueueElement() =delete;
-    CANThreadSendQueueElement(CANMessage msg, int32_t intervalMs) : 
-        m_msg(msg), m_intervalMs(intervalMs), m_prevTimestamp(std::chrono::steady_clock::now()) {
-
-    }
-    CANMessage m_msg;
-    int32_t m_intervalMs;
-    std::chrono::time_point<std::chrono::steady_clock> m_prevTimestamp;
-};
-
-} // namespace detail
 
 class CandleWinUSBDeviceThread { 
 public:

@@ -30,15 +30,17 @@
 #include <iostream>
 
 #include "rev/CANBridge.h"
-#include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
-#include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
+// #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+// #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
+// #include "rev/Drivers/SerialPort/SerialDevice.h"
+// #include "rev/Drivers/SerialPort/SerialDriver.h"
 #include "rev/CANMessage.h"
 
 /**
  * Returns the number of devices seen on the bus, will only register the first device
  */
 TEST(CANMessageTest, SendAndReceive) {
-   auto handle = CANBridge_Scan();
+    auto handle = CANBridge_Scan();
 
     int numDevices = CANBridge_NumDevices(handle);
 

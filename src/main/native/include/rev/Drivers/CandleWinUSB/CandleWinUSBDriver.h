@@ -39,12 +39,12 @@ namespace usb {
 class CandleWinUSBDriver : public CANDriver {
 public:
     CandleWinUSBDriver() {}
-    ~CandleWinUSBDriver() override {}
+    virtual ~CandleWinUSBDriver() override {}
 
     virtual std::string GetName() const {return "Candle WINUSB";}
 
-    virtual std::vector<CANDeviceDetail> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
+    virtual std::vector<CANDeviceDetail> GetDevices() override;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) override;
 };
 
 } // namespace usb
