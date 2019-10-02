@@ -47,7 +47,7 @@ namespace usb {
 class TCPBridgeDevice : public rev::usb::CANDevice {
 public:
     TCPBridgeDevice() =delete;
-    TCPBridgeDevice(const std::string ip, const unsigned short port);
+    TCPBridgeDevice(const std::string host, const std::string port);
     virtual ~TCPBridgeDevice();
 
     virtual std::string GetName() const;
@@ -67,8 +67,8 @@ public:
 
     virtual bool Connect();
 private:
-    asio::ip::address m_ip;
-    const unsigned short m_port;
+    std::string m_host;
+    std::string m_port;
 
     asio::io_service m_ioservice;
     tcp::socket m_sock;
@@ -82,13 +82,14 @@ private:
     uint8_t msgBuf[30];
 
     int ParseStreamResponse(uint32_t* num_messages);
+    bool ParseCANMessagePacket(CANMessage&);
     int CheckPacket(int *packet_size);
     void SerializeOpenStreamMessage(CANBridge_CANFilter filter, uint32_t maxSize);
     void SerializeReadStreamMessage(uint32_t messagesToRead);
     void SerializeRecieveCANMessage(uint32_t messageID, uint32_t messageMask);
     void SerializeSendMsgPacket(const CANMessage& msg, int periodMs);
     bool Send(uint8_t*, size_t);
-    size_t Recv();
+    size_t Recv(size_t bytesToRead = 0, size_t offset = 0);
 };
 
 } // namespace usb

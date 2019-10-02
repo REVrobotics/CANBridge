@@ -41,9 +41,8 @@ namespace usb {
 std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
 {
     std::vector<CANDeviceDetail> retval;
-
-    // TODO: add a scan for devices on the network
-    TCPBridgeDevice m_dev{"172.22.11.2", 8800};
+    // TODO: make this not hardcoded...
+    TCPBridgeDevice m_dev{"roboRIO-2714-FRC.local", "8800"};
     if(m_dev.IsConnected()) {
         retval.push_back({m_dev.GetDescriptor(), "roboRIO", this->GetName()});
     }
@@ -59,7 +58,7 @@ std::unique_ptr<CANDevice> TCPBridgeDriver::CreateDeviceFromDescriptor(const wch
     convert_wstring_to_string(descriptor, ipAddr);
 
     // TODO: make this not hardcoded...
-    return std::make_unique<TCPBridgeDevice>("172.22.11.2", 8800);
+    return std::make_unique<TCPBridgeDevice>("roboRIO-2714-FRC.local", "8800");
 }
 
 } // namespace usb

@@ -27,7 +27,7 @@
  */
 
 #include "rev/Drivers/TCPBridge/TCPBridgeDevice.h"
-#include "rev/Drivers/TCPBridge/TCPBridgePackets.h"
+#include "rev/Drivers/TCPBridge/TCPBridgeMessages.h"
 
 #include <iostream> //TODO: Remove
 
@@ -36,34 +36,34 @@
 #include <asio.hpp>
 using asio::ip::tcp;
 
-#define DEFAULT_PORT "8800"
-
 namespace rev {
 namespace usb {
 
-TCPBridgeDevice::TCPBridgeDevice(const std::string ip, const unsigned short port)
-    : m_ip(asio::ip::address::from_string(ip)), m_port(port), m_sock(m_ioservice)
+TCPBridgeDevice::TCPBridgeDevice(const std::string host, const std::string port)
+    : m_host(host), m_port(port), m_sock(m_ioservice)
 {
     m_isConnected = Connect();
 }
 
 TCPBridgeDevice::~TCPBridgeDevice()
 {
-    // std::cout << "Closing device" << std::endl;
+
 }
 
 bool TCPBridgeDevice::Connect()
 {
-    std::string ipStr = m_ip.to_string();
-    #if __TCP_DEBUG__
-    std::cout << "Connecting to " << ipStr << ":" << m_port << std::endl;
-    #endif
     try
     {
-        asio::ip::tcp::endpoint endpoint(m_ip, m_port);
+        asio::ip::tcp::resolver resolver(m_ioservice);
+        asio::ip::tcp::resolver::query query(m_host, m_port);
+        asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+        asio::ip::tcp::resolver::iterator end;
 
         asio::error_code error = asio::error::host_not_found;
-        m_sock.connect(endpoint, error);
+        while(error && endpoint_iterator != end) {
+            m_sock.close();
+            m_sock.connect(*endpoint_iterator++, error);
+        }
     
         if(error)
         {
@@ -83,8 +83,10 @@ bool TCPBridgeDevice::Connect()
         std::cerr << "Exception occured while trying to connect." << std::endl;
         return false;
     }
-    
-    m_descriptor = converter.from_bytes(ipStr + ":" + std::to_string(m_port));
+
+    // convert the ip address we connected to into a string
+    std::string ipStr = m_sock.remote_endpoint().address().to_string();
+    m_descriptor = converter.from_bytes(ipStr + ":" + m_port);
     m_name = ipStr;
 
     return true;
@@ -123,14 +125,18 @@ bool TCPBridgeDevice::Send(uint8_t* buf, size_t sendSize)
     return (sentSize == sendSize);
 }
 
-size_t TCPBridgeDevice::Recv()
+size_t TCPBridgeDevice::Recv(size_t bytesToRead, size_t offset)
 {
     asio::error_code error;
     size_t len = 0;
     
     try
     {
-        len = m_sock.read_some(asio::buffer(recbuf), error);
+        if(bytesToRead)
+            len = m_sock.read_some(asio::buffer(recbuf + offset, bytesToRead), error);
+            std::future<size_t> fut = std::async([this, bytes, bufOffset, &error]{ return this->m_sock.read_some(asio::buffer(m_readBuf + bufOffset, bytes), error);});
+        else
+            len = m_sock.read_some(asio::buffer(recbuf + offset, MAXBUFFERSIZE), error);
     }
     catch(std::exception& e)
     {
@@ -143,9 +149,6 @@ size_t TCPBridgeDevice::Recv()
     printf("%zd bytes rec'd\n", len);
     #endif
 
-    // for(size_t i = 0; i < len; i++)
-    //     printf("\t%3zd: 0x%02X\n", i, recbuf[i]);
-
     if (error == asio::error::eof) {
         #if __TCP_DEBUG__
         std::cout << "Client disconnected" << std::endl;
@@ -157,18 +160,17 @@ size_t TCPBridgeDevice::Recv()
 }
 
 void TCPBridgeDevice::SerializeSendMsgPacket(const CANMessage& msg, int periodMs) {
-	sendbuf[0] = HEADER_TOKEN;
-	sendbuf[1] = 22;
-	sendbuf[2] = SEND_MSG;
-	sendbuf[3] = 0;
-	
-    uint32_t messageID = msg.GetMessageId();
-    memcpy(&sendbuf[4], &messageID, 4);
-    memcpy(&sendbuf[8], &periodMs, 4);
-	sendbuf[12] = msg.GetSize();
-	memcpy(sendbuf + 13, msg.GetData(), msg.GetSize());
-	
-	sendbuf[21] = TRAILER_TOKEN;
+    canStreamer_sendMessage_t sendMsg;
+    sendMsg.header.headerToken = HEADER_TOKEN;
+    sendMsg.header.packetSize = sizeof(canStreamer_sendMessage_t);
+    sendMsg.header.commandId = canstreamer_cmd::SEND_MSG_CMD;
+    sendMsg.messageId = msg.GetMessageId();
+    sendMsg.periodMs = periodMs;
+    sendMsg.datasize = msg.GetSize();
+    memcpy(sendMsg.data, msg.GetData(), msg.GetSize());
+    sendMsg.trailer.trailerToken = TRAILER_TOKEN;
+
+    memcpy(sendbuf, &sendMsg, sizeof(canStreamer_sendMessage_t));
 }
 
 CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, int periodMs)
@@ -184,21 +186,20 @@ CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 
     SerializeSendMsgPacket(msg, periodMs);
 
-    return Send(sendbuf, 22) ? CANStatus::kOk : CANStatus::kError;
+    return Send(sendbuf, sizeof(canStreamer_sendMessage_t)) ? CANStatus::kOk : CANStatus::kError;
 }
 
 void TCPBridgeDevice::SerializeRecieveCANMessage(uint32_t messageID, uint32_t messageMask)
 {
-    sendbuf[0] = HEADER_TOKEN;
-	sendbuf[1] = 14;
-	sendbuf[2] = RCV_MSG;
-	sendbuf[3] = 0;
-	
-    memcpy(&sendbuf[4], &messageID, 4);
-    memcpy(&sendbuf[8], &messageMask, 4);
-	sendbuf[12] = 8;
-	
-	sendbuf[13] = TRAILER_TOKEN;
+    canStreamer_readMessage_t readMsg;
+    readMsg.header.headerToken = HEADER_TOKEN;
+    readMsg.header.packetSize = sizeof(canStreamer_readMessage_t);
+    readMsg.header.commandId = READ_MSG_CMD;
+    readMsg.messageId = messageID;
+    readMsg.messageMask = messageMask;
+    readMsg.trailer.trailerToken = TRAILER_TOKEN;
+
+    memcpy(sendbuf, &readMsg, sizeof(canStreamer_readMessage_t));
 }
 
 CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
@@ -211,13 +212,13 @@ CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID
     uint32_t messagesRead = 0;
     SerializeRecieveCANMessage(messageID, messageMask);
 
-    if(!Send(sendbuf, 14))
+    if(!Send(sendbuf, sizeof(canStreamer_readMessage_t)))
     {
         return CANStatus::kError;
     }
 
     // get response
-    numbytes = Recv();
+    numbytes = Recv(sizeof(canStreamer_readStream_t));
 
     if(ParseStreamResponse(&messagesRead) != 0)
     {
@@ -235,45 +236,51 @@ CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID
 
     numbytes = Recv();
 
-    int bytesRemaining = 0;
-    int msg_idx = 0;
-    uint32_t msgNum = 0;
-    
-    // TODO: make deserialize CAN message func
-    uint8_t tmp[8];
-    uint32_t timestamp;
-    uint8_t datasize;
-    memcpy(&messageID, &recbuf[0], 4);
-    memcpy(&timestamp, &recbuf[4], 4);
-    datasize = recbuf[8];
-    memcpy(tmp, &recbuf[9], 8);
-    msg = CANMessage(messageID, tmp, datasize, timestamp);
-
-    #if __TCP_DEBUG__
-    std::cout << "\tMessage ID: " << messageID << std::endl;
-    std::cout << "\tTimestamp: " << timestamp << std::endl;
-    // std::cout << "\tDatasize: " << datasize << std::endl;
-    printf("\tDatasize: 0x%02X\n", datasize);
-    for(uint8_t i = 0; i < datasize; i++) {
-        printf("\t0x%02X\n", recbuf[9 + i]);
+    if(numbytes < sizeof(canStreamer_canMessage_t)) {
+        return CANStatus::kError;
     }
-    #endif
+    
+    if(!ParseCANMessagePacket(msg)) {
+        return CANStatus::kError;
+    }
 
     return CANStatus::kOk;
 }
 
+bool TCPBridgeDevice::ParseCANMessagePacket(CANMessage &msg)
+{
+    canStreamer_canMessage_t canMsg;
+    memcpy(&canMsg, &recbuf, sizeof(canStreamer_canMessage_t));
+    if(canMsg.header.headerToken != HEADER_TOKEN) return false;
+    if(canMsg.header.packetSize != sizeof(canStreamer_canMessage_t)) return false;
+    if(canMsg.trailer.trailerToken != TRAILER_TOKEN) return false;
+
+    msg = CANMessage(canMsg.messageId, canMsg.data, canMsg.datasize, canMsg.timestamp);
+
+    #if __TCP_DEBUG__
+    std::cout << "\tMessage ID: " << canMsg.messageID << std::endl;
+    std::cout << "\tTimestamp: " << canMsg.timestamp << std::endl;
+    printf("\tDatasize: 0x%02X\n", canMsg.datasize);
+    for(uint8_t i = 0; i < canMsg.datasize; i++) {
+        printf("\t0x%02X\n", canMsg.data[i]);
+    }
+    #endif
+
+    return true;
+}
+
 void TCPBridgeDevice::SerializeOpenStreamMessage(CANBridge_CANFilter filter, uint32_t maxSize)
 {
-    sendbuf[0] = HEADER_TOKEN;
-	sendbuf[1] = 17;
-	sendbuf[2] = OPEN_STREAM;
-	sendbuf[3] = 0x00;
+    canStreamer_openStream_t openPkt;
+    openPkt.header.headerToken = HEADER_TOKEN;
+    openPkt.header.packetSize = sizeof(canStreamer_openStream_t);
+    openPkt.header.commandId = OPEN_STREAM_CMD;
+    openPkt.messageId = filter.messageId;
+    openPkt.messageMask = filter.messageMask;
+    openPkt.maxMessages = maxSize;
+    openPkt.trailer.trailerToken = TRAILER_TOKEN;
 
-    memcpy(&sendbuf[4], &filter.messageId, 4);
-    memcpy(&sendbuf[8], &filter.messageMask, 4);
-    memcpy(&sendbuf[12], &maxSize, 4);
-	
-	sendbuf[16] = TRAILER_TOKEN;
+    memcpy(sendbuf, &openPkt, sizeof(canStreamer_openStream_t));
 }
 
 CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle,
@@ -288,7 +295,7 @@ CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle,
 
     SerializeOpenStreamMessage(filter, maxSize);
 
-    if(!Send(sendbuf, 17))
+    if(!Send(sendbuf, sizeof(canStreamer_openStream_t)))
     {
         std::cerr << "Error sending" << std::endl;
     }
@@ -319,30 +326,40 @@ int TCPBridgeDevice::CheckPacket(int *packet_size) {
 }
 
 int TCPBridgeDevice::ParseStreamResponse(uint32_t* num_messages) {
-	int packet_size = 0;
-	if(CheckPacket(&packet_size) != 0) {
-		return -1;
-	}
+	// int packet_size = 0;
+	// if(CheckPacket(&packet_size) != 0) {
+	// 	return -1;
+	// }
 	
-	uint32_t tmp = 0;
-	tmp = recbuf[4];
-	tmp |= (recbuf[5] << 8);
-	tmp |= (recbuf[6] << 16);
-	tmp |= (recbuf[7] << 24);
+	// uint32_t tmp = 0;
+	// tmp = recbuf[4];
+	// tmp |= (recbuf[5] << 8);
+	// tmp |= (recbuf[6] << 16);
+	// tmp |= (recbuf[7] << 24);
 		
-	*num_messages = tmp;
+	// *num_messages = tmp;
+
+    canStreamer_readStream_t rsPkt;
+    memcpy(&rsPkt, &recbuf, sizeof(canStreamer_readStream_t));
+    if(rsPkt.header.headerToken != HEADER_TOKEN) return false;
+    if(rsPkt.header.packetSize != sizeof(canStreamer_readStream_t)) return false;
+    if(rsPkt.trailer.trailerToken != TRAILER_TOKEN) return false;
+
+    *num_messages = rsPkt.maxMessages;
+
 	return 0;
 }
 
 void TCPBridgeDevice::SerializeReadStreamMessage(uint32_t messagesToRead)
 {
-    sendbuf[0] = HEADER_TOKEN;
-	sendbuf[1] = 9; // size
-	sendbuf[2] = READ_STREAM;
-	sendbuf[3] = 0x00;
-	
-	memcpy(&sendbuf[4], &messagesToRead, 4);
-	sendbuf[8] = TRAILER_TOKEN;
+    canStreamer_readStream_t readMsg;
+    readMsg.header.headerToken = HEADER_TOKEN;
+    readMsg.header.packetSize = sizeof(canStreamer_readStream_t);
+    readMsg.header.commandId = READ_STREAM_CMD;
+    readMsg.maxMessages = messagesToRead;
+    readMsg.trailer.trailerToken = TRAILER_TOKEN;
+
+    memcpy(sendbuf, &readMsg, sizeof(canStreamer_readStream_t));
 }
 
 CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
@@ -359,13 +376,13 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
     // send read stream packet
     SerializeReadStreamMessage(messagesToRead);
 
-    if(!Send(sendbuf, 9))
+    if(!Send(sendbuf, sizeof(canStreamer_readStream_t)))
     {
         return CANStatus::kError;
     }
 
-    // // get response
-    numbytes = Recv();
+    // get response
+    numbytes = Recv(sizeof(canStreamer_readStream_t));
 
     if(ParseStreamResponse(messagesRead) != 0) {
         return CANStatus::kError;
@@ -386,19 +403,19 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
         bytesRemaining += numbytes;
         
         while(bytesRemaining > 0) {
-            memcpy(msgBuf, recbuf + msg_idx, 17);
+            memcpy(msgBuf, recbuf + msg_idx, 22);
             
             // TODO: make deserialize CAN message func
             HAL_CANStreamMessage halMsg;
-            memcpy(&halMsg.messageID, &msgBuf[0], 4);
-            memcpy(&halMsg.timeStamp, &msgBuf[4], 4);
-            halMsg.dataSize = msgBuf[8];
-            memcpy(halMsg.data, &msgBuf[9], sizeof(halMsg.data));
+            memcpy(&halMsg.messageID, &msgBuf[4], 4);
+            memcpy(&halMsg.timeStamp, &msgBuf[8], 4);
+            halMsg.dataSize = msgBuf[12];
+            memcpy(halMsg.data, &msgBuf[13], sizeof(halMsg.data));
             
             msgs[msgNum] = halMsg;
             
-            msg_idx += 17;
-            bytesRemaining -= 17;
+            msg_idx += 22;
+            bytesRemaining -= 22;
             msgNum++;
         }
         msg_idx = 0;
