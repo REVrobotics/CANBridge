@@ -28,7 +28,7 @@
 
 #ifdef _WIN32
 
-#include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+#include "rev/Drivers/SerialPort/SerialDevice.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -36,70 +36,50 @@
 #include <mockdata/CanData.h>
 #include <hal/CAN.h>
 
-#define CANDLE_DEFAULT_CHANNEL 0
-#define CANDLE_DEFAULT_FLAGS    (candle_device_mode_flags_t)(CANDLE_MODE_NORMAL | CANDLE_MODE_PAD_PKTS_TO_MAX_PKT_SIZE)
+#include "serial/serial.h"
 
 namespace rev {
 namespace usb {
 
-static void close_candle_dev(candle_handle hDev)
-{
-    candle_dev_close(hDev);
-    candle_dev_free(hDev);
-}
-
-CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
-    m_thread(hDev)
-{
-    m_handle = hDev;
-    if (candle_dev_open(hDev) == false) {
-        std::cout << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
-        close_candle_dev(hDev);
-        throw "Failed to open device!";
-    }
-
-    if (candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS) == false) {
-        std::cout << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
-        close_candle_dev(hDev);
-        throw "Failed to start device channel 0!";
-    }
-    
-    m_descriptor = candle_dev_get_path(m_handle);
-    m_name = candle_dev_get_name(m_handle);
+SerialDevice::SerialDevice(std::string port) :
+    m_thread(port)
+{  
+    m_descriptor = std::wstring();
+    convert_string_to_wstring(port, m_descriptor);
+    m_name = "SPARK MAX";
     m_thread.Start();
+
 }
 
-CandleWinUSBDevice::~CandleWinUSBDevice()
+SerialDevice::~SerialDevice()
 {
     m_thread.Stop();
-    
-    candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
-    close_candle_dev(m_handle);
 }
 
-std::string CandleWinUSBDevice::GetName() const
+std::string SerialDevice::GetName() const
 {
     return m_name;
 }
 
 
-std::wstring CandleWinUSBDevice::GetDescriptor() const
+std::wstring SerialDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
 
-int CandleWinUSBDevice::GetId() const
+int SerialDevice::GetId() const
 {
     return 0;
 }
 
-CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
+CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
+   
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
+CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
 {
     CANStatus status = CANStatus::kTimeout;
    
@@ -122,31 +102,32 @@ CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messag
     return status;
 }
 
-CANStatus CandleWinUSBDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
+CANStatus SerialDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
 {
     // Register the stream with the correct buffer size
-    m_thread.OpenStream(sessionHandle, filter, maxSize);
+    CANStatus stat = CANStatus::kOk;
+    m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
     
-    return CANStatus::kOk;
+    return stat;
 }
-CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
+CANStatus SerialDevice::CloseStreamSession(uint32_t sessionHandle)
 {
     m_thread.CloseStream(sessionHandle);
     return CANStatus::kOk;
 }
-CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
+CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
 {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
     status = static_cast<int32_t>(CANStatus::kOk);    
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::GetCANStatus()
+CANStatus SerialDevice::GetCANStatus()
 {
     return CANStatus::kOk;
 }
 
-bool CandleWinUSBDevice::IsConnected()
+bool SerialDevice::IsConnected()
 {
     return true;
 }

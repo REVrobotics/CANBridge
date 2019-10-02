@@ -41,5 +41,42 @@ void convert_wstring_to_string(const std::wstring& in, std::string& out)
     out = converter.to_bytes(in.c_str());
 }
 
+void convert_string_to_wstring(const std::string& in, std::wstring& out) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    out = converter.from_bytes(in.c_str());
+}
+
+bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
+{
+    bool result = (filter.messageMask & id) == (filter.messageMask & filter.messageId); 
+    
+    return result;
+}
+
+bool CANMessageCompare(CANMessage& a, CANMessage& b) 
+{
+    return a.GetTimestampUs() > b.GetTimestampUs();
+}
+
+int parse_serial_com_port(const std::string& in) {
+    uint8_t substr_break;
+#if defined(_WIN32)
+    substr_break = 3; // COMxx
+#elif defined(__linux__) 
+    substr_break = 11; // /dev/ttyUSBxx
+#elif defined(__APPLE__)
+    substr_break = 9; // /dev/diskxx
+#endif
+
+    if(!in.empty() && (substr_break < in.length())) {
+        std::string num = in.substr(substr_break, in.length());
+        if (!num.empty()) {
+            return std::stoi(num);
+        }
+    }
+
+    return -1;
+}
+
 }
 }

@@ -28,13 +28,41 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+
+#include "rev/Drivers/SerialPort/SerialDeviceThread.h"
+#include "rev/CANDevice.h"
+#include "rev/CANMessage.h"
+#include "rev/CANStatus.h"
+
 namespace rev {
 namespace usb {
 
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154 // to match WPILib HAL
+class SerialDevice : public CANDevice {
+public:
+    SerialDevice() =delete;
+    SerialDevice(std::string port);
+    virtual ~SerialDevice();
+
+    virtual std::string GetName() const;
+    virtual std::wstring GetDescriptor() const;
+
+    virtual int GetId() const;
+
+    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
+    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask) override;
+    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status);
+
+    virtual CANStatus GetCANStatus();
+
+    virtual bool IsConnected();
+private:
+    SerialDeviceThread m_thread;
+    std::wstring m_descriptor;
+    std::string m_name;
 };
 
 } // namespace usb

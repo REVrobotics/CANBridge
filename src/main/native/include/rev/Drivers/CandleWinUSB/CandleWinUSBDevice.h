@@ -45,7 +45,7 @@ class CandleWinUSBDevice : public CANDevice {
 public:
     CandleWinUSBDevice() =delete;
     CandleWinUSBDevice(candle_handle hDev);
-    ~CandleWinUSBDevice();
+    virtual ~CandleWinUSBDevice();
 
     virtual std::string GetName() const;
     virtual std::wstring GetDescriptor() const;
@@ -53,10 +53,10 @@ public:
     virtual int GetId() const;
 
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
-    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageMask, uint32_t& timestamp) override;
-    virtual CANStatus OpenStreamSession();
-    virtual CANStatus CloseStreamSession();
-    virtual CANStatus ReadStreamSession();
+    virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask) override;
+    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status);
 
     virtual CANStatus GetCANStatus();
 

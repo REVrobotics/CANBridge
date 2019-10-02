@@ -26,16 +26,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <hal/HAL.h>
 
-namespace rev {
-namespace usb {
+#include "MockDS.h"
 
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154 // to match WPILib HAL
-};
+#include "gtest/gtest.h"
 
-} // namespace usb
-} // namespace rev
+
+int main(int argc, char** argv) {
+  HAL_Initialize(500, 0);
+  frc::MockDS ds;
+  ds.start();
+  HAL_ObserveUserProgramStarting();
+  ds.enable();
+
+  ::testing::InitGoogleTest(&argc, argv);
+  int ret = RUN_ALL_TESTS();
+  return ret;
+}

@@ -28,13 +28,23 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+
+#include "rev/CANDriver.h"
+
 namespace rev {
 namespace usb {
 
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154 // to match WPILib HAL
+class SerialDriver : public CANDriver {
+public:
+    SerialDriver() {}
+    virtual ~SerialDriver() override {}
+
+    virtual std::string GetName() const {return "Legacy";}
+
+    virtual std::vector<CANDeviceDetail> GetDevices() override;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) override;
 };
 
 } // namespace usb
