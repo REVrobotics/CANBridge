@@ -95,12 +95,6 @@ int CandleWinUSBDevice::GetId() const
 
 CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-    auto data = msg.GetData();
-    // std::cout << "sent) msg id: " << (int)msg.GetMessageId() << " data: ";
-    // for (int i = 0; i < 8; i++) {
-    //     std::cout << std::hex << (int)(data[i]) << "_";
-    // }
-    // std::cout << "\n";
     m_thread.EnqueueMessage(msg, periodMs);
     return CANStatus::kOk;
 }

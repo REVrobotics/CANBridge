@@ -186,7 +186,8 @@ private:
     std::mutex m_recvMutex;
     std::mutex m_streamMutex;
 
-    uint32_t counter = 0xe45b5597;
+    // This is just a random number to start counting for the handles
+    uint32_t counter = 0xa45b5597; // Change to be unique relative to CandleWinUSBDeviceThread
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, CANMessage> m_recvStore;
@@ -240,7 +241,6 @@ private:
                                 memcpy(msgData, data+4, 8*sizeof(uint8_t));
                             }
 
-                            // std::cout << std::hex << ">> r msg ids: " <<  msgId <<  std::dec << std::endl;
 
                             CANMessage msg(msgId, msgData, 8);
                             

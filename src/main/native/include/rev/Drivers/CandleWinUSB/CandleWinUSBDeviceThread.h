@@ -103,7 +103,7 @@ public:
         m_streamMutex.lock();
 
         // Create the handle
-        *handle = counter++;
+        *handle = m_counter++;
 
         // Add to the map
         m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
@@ -156,7 +156,8 @@ private:
     std::mutex m_recvMutex;
     std::mutex m_streamMutex;
 
-    uint32_t counter = 0xe45b5597;
+    // This is just a random number to start counting for the handles
+    uint32_t m_counter = 0xe45b5597; 
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, CANMessage> m_recvStore;
@@ -174,10 +175,8 @@ private:
             bool reading = true;
             while (reading) {
                 candle_frame_t incomingFrame;
-                incomingFrame.can_id = 19088743;
-                for (int i = 0; i < 8; i++) {
-                    incomingFrame.data[i] = 9;
-                }
+                incomingFrame.can_id;
+            
                 reading = candle_frame_read(m_device, &incomingFrame, 0);
 
                 // Recieved a new frame, store it

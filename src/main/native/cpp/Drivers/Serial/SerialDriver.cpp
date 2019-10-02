@@ -42,7 +42,7 @@
 namespace rev {
 namespace usb {
 
-
+static const std::string SparkMax_HardwareId = "USB\\VID_0483&PID_5740&REV_0200";
 
 std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 {
@@ -51,7 +51,7 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-        if (parse_serial_com_port(dev.port) != -1) {
+        if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
             std::wstring desc;
             convert_string_to_wstring(dev.port, desc);
             std::string name("SPARK MAX"); 
