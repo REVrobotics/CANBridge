@@ -33,7 +33,7 @@
 #include <locale>
 #include <codecvt>
 
-// #include "rev/Drivers/TCPBridge/TCPBridgeDeviceThread.h"
+#include "rev/Drivers/TCPBridge/TCPBridgeMessage.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
@@ -76,10 +76,15 @@ private:
     std::wstring m_descriptor;
     std::string m_name;
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
     bool m_isConnected{false};
-    uint8_t sendbuf[30];
-    char recbuf[1024];
-    uint8_t msgBuf[30];
+    static constexpr size_t READ_BUF_SIZE = 512;
+    char m_sendBuf[512];
+    char m_readBuf[READ_BUF_SIZE];
+
+    bool WriteMessage(std::unique_ptr<TCPBridgeMessage> &msg);
+    std::unique_ptr<TCPBridgeMessage> ReadMessage(CANStatus &stat);
+    size_t Read(size_t bytesToRead, size_t bufOffset, CANStatus &stat);
 
     int ParseStreamResponse(uint32_t* num_messages);
     bool ParseCANMessagePacket(CANMessage&);
@@ -89,7 +94,6 @@ private:
     void SerializeRecieveCANMessage(uint32_t messageID, uint32_t messageMask);
     void SerializeSendMsgPacket(const CANMessage& msg, int periodMs);
     bool Send(uint8_t*, size_t);
-    size_t Recv(size_t bytesToRead = 0, size_t offset = 0);
 };
 
 } // namespace usb
