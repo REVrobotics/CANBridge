@@ -2,6 +2,78 @@
 
 #include <string>
 
+#pragma once
+
+#ifdef _WIN32
+#define PACKED
+#pragma pack(push, 1)
+#else
+#define PACKED __attribute__((__packed__))
+#endif
+
+/** Message packet definitions for CAN SparkMax Server */
+
+typedef struct PACKED {
+    uint8_t headerToken;
+    uint8_t packetSize;
+    uint8_t commandId;
+    uint8_t res;
+} canStreamerHeader_t;
+
+typedef struct PACKED {
+    uint8_t trailerToken;
+} canStreamerTrailer_t;
+
+/** ReadStream Packet */
+typedef struct PACKED {
+    canStreamerHeader_t header;
+    uint32_t maxMessages;
+    canStreamerTrailer_t trailer;
+} canStreamer_readStream_t;
+
+/** OpenStream Packet */
+typedef struct PACKED {
+    canStreamerHeader_t header;
+    uint32_t messageId;
+    uint32_t messageMask;
+    uint32_t maxMessages;
+    canStreamerTrailer_t trailer;
+} canStreamer_openStream_t;
+
+/** ReadMessage Packet */
+typedef struct PACKED {
+    canStreamerHeader_t header;
+    uint32_t messageId;
+    uint32_t messageMask;
+    canStreamerTrailer_t trailer;
+} canStreamer_readMessage_t;
+
+/** SendMessage Packet */
+typedef struct PACKED {
+    canStreamerHeader_t header;
+    uint32_t messageId;
+    uint32_t periodMs;
+    uint8_t datasize;
+    uint8_t data[8];
+    canStreamerTrailer_t trailer;
+} canStreamer_sendMessage_t;
+
+/** CANMessage Packet */
+typedef struct PACKED {
+    canStreamerHeader_t header;
+    uint32_t messageId;
+    uint32_t timestamp;
+    uint8_t datasize;
+    uint8_t data[8];
+    canStreamerTrailer_t trailer;
+} canStreamer_canMessage_t;
+
+#ifdef _WIN32
+#pragma pack(pop)
+#endif
+
+#undef PACKED
+
 class TCPBridgeMessage
 {
     public:
@@ -42,14 +114,16 @@ class TCPBridgeMessage
     virtual void FillData(char *bytebuf) = 0;
     bool Validate(const char *bytebuf);
     bool IsValid() const;
-    static const size_t GetHeaderSize();
-    const size_t GetSize() const;
+    static size_t GetHeaderSize();
+    size_t GetSize() const;
     void SetSize(const size_t s);
-    void BuildHeaderFooter(char *bytebuf);
+    void BuildHeaderFooter(char *bytebuf) const;
+
     static bool ParseHeader(char *buf, TCPBridgeCommands *cmdType, size_t *pktLen);
     TCPBridgeCommands GetCommand() const;
-
-    private:
+    const canStreamerHeader_t BuildHeader(const TCPBridgeCommands cmdType, uint8_t pktLen);
+    const canStreamerTrailer_t BuildTrailer();
+    protected:
     bool m_isValid = false;
     size_t m_size;
     TCPBridgeCommands m_cmd = INVALID_CMD;
@@ -62,18 +136,13 @@ class ReadStreamPacket : public TCPBridgeMessage
     ReadStreamPacket(const char *bytebuf);
     ReadStreamPacket(const uint32_t maxMessages);
 
-    void FillData(char *bytebuf);
+    virtual void FillData(char *bytebuf) override;
     static std::unique_ptr<TCPBridgeMessage> create(const char *bytebuf);
-    const uint32_t GetMaxMessages() const;
+    uint32_t GetMaxMessages() const;
 
     private:
     uint32_t m_maxMessages;
-
-    enum {
-        READ_STREAM_PKT_SIZE = 9,
-        MAX_MSGS_IDX = 4,
-        MAX_MSGS_SIZE = 4
-    };
+    canStreamer_readStream_t m_messageStruct;
 };
 
 class OpenStreamPacket : public TCPBridgeMessage
@@ -82,7 +151,7 @@ class OpenStreamPacket : public TCPBridgeMessage
     OpenStreamPacket(const char *bytebuf);
     OpenStreamPacket(const uint32_t messageID, const uint32_t messageMask, const uint32_t maxMessages);
 
-    void FillData(char *bytebuf);
+    virtual void FillData(char *bytebuf) override;
     static std::unique_ptr<TCPBridgeMessage> create(const char *bytebuf);
 
     private:
@@ -105,7 +174,7 @@ class ReadMessagePacket : public TCPBridgeMessage
     ReadMessagePacket(const char *bytebuf);
     ReadMessagePacket(const uint32_t messageID, const uint32_t messageMask);
 
-    void FillData(char *bytebuf);
+    virtual void FillData(char *bytebuf) override;
     static std::unique_ptr<TCPBridgeMessage> create(const char *bytebuf);
 
     private:
@@ -126,7 +195,7 @@ class SendMessagePacket : public TCPBridgeMessage
     SendMessagePacket(const char *bytebuf);
     SendMessagePacket(const uint32_t messageID, const uint32_t periodMs, const uint8_t datasize, const uint8_t *data);
 
-    void FillData(char *bytebuf);
+    virtual void FillData(char *bytebuf) override;
     static std::unique_ptr<TCPBridgeMessage> create(const char *bytebuf);
 
     private:
@@ -150,12 +219,12 @@ class CANMessagePacket : public TCPBridgeMessage
     CANMessagePacket(const char *bytebuf);
     CANMessagePacket(const uint32_t messageID, const uint32_t timestamp, const uint8_t datasize, const uint8_t *data);
 
-    void FillData(char *bytebuf);
+    virtual void FillData(char *bytebuf) override;
     static std::unique_ptr<TCPBridgeMessage> create(const char *bytebuf);
 
-    const uint32_t GetMessageID() const;
-    const uint32_t GetTimestamp() const;
-    const uint8_t GetDatasize() const;
+    uint32_t GetMessageID() const;
+    uint32_t GetTimestamp() const;
+    uint8_t GetDatasize() const;
     const uint8_t* GetData() const;
 
     private:
@@ -173,4 +242,12 @@ class CANMessagePacket : public TCPBridgeMessage
         DATASIZE_SIZE = 1,
         DATA_IDX = 13
     };
+};
+
+class InvalidPacket : public TCPBridgeMessage
+{
+    public:
+    InvalidPacket();
+    static std::unique_ptr<TCPBridgeMessage> create();
+    virtual void FillData(char *bytebuf) override;
 };

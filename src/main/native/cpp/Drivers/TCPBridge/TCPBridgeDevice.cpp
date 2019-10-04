@@ -155,7 +155,7 @@ std::unique_ptr<TCPBridgeMessage> TCPBridgeDevice::ReadMessage(CANStatus &stat)
         }
     }
 
-    return nullptr;
+    return InvalidPacket::create();
 }
 
 size_t TCPBridgeDevice::Read(size_t bytesToRead, size_t bufOffset, CANStatus &stat)
@@ -206,7 +206,7 @@ CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, const int perio
     std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<SendMessagePacket>(new SendMessagePacket(msg.GetMessageId(), periodMs, msg.GetSize(), msg.GetData()));
     if(!WriteMessage(sendMsg))
     {
-        CANStatus::kError;
+        return CANStatus::kError;
     }
     return CANStatus::kOk;
 }
@@ -222,7 +222,7 @@ CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, const uint32_t mes
     std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<ReadMessagePacket>(new ReadMessagePacket(messageID, messageMask));
     if(!WriteMessage(sendMsg))
     {
-        CANStatus::kError;
+        return CANStatus::kError;
     }
 
     // read response
@@ -231,21 +231,11 @@ CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, const uint32_t mes
     std::unique_ptr<TCPBridgeMessage> readMsg;
     readMsg = ReadMessage(stat);
 
-    if(readMsg == nullptr)
-    {
-        return stat;
-    }
-
     if(readMsg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD)
     {
         auto rsMsg = dynamic_cast<ReadStreamPacket&>(*readMsg);
 
         readMsg = ReadMessage(stat);
-
-        if(readMsg == nullptr)
-        {
-            return CANStatus::kError;
-        }
 
         if(readMsg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD)
         {
@@ -271,7 +261,7 @@ CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle,
     std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<OpenStreamPacket>(new OpenStreamPacket(filter.messageId, filter.messageMask, maxSize));
     if(!WriteMessage(sendMsg))
     {
-        CANStatus::kError;
+        return CANStatus::kError;
     }
     return CANStatus::kOk;
 }
@@ -305,11 +295,6 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
 
     msg = ReadMessage(stat);
 
-    if(msg == nullptr)
-    {
-        return stat;
-    }
-
     if(msg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD)
     {
         auto rsmsg = dynamic_cast<ReadStreamPacket&>(*msg);
@@ -317,17 +302,6 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
         while(*messagesRead < rsmsg.GetMaxMessages())
         {
             msg = ReadMessage(stat);
-
-            if(msg == nullptr)
-            {
-                missedMessage++;
-
-                if(missedMessage > 10) { // TODO: this number is arbitrary
-                    // std::cerr << "Too many messages missed!" << std::endl;
-                    return CANStatus::kTimeout;
-                }
-                continue;
-            }
 
             if(msg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD)
             {
@@ -349,7 +323,13 @@ CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
             }
             else 
             {
-                // std::cerr << "Unexpected message received" << std::endl;
+                missedMessage++;
+
+                if(missedMessage > 10) { // TODO: this number is arbitrary
+                    // std::cerr << "Too many messages missed!" << std::endl;
+                    return CANStatus::kTimeout;
+                }
+                continue;
             }
         }
     }

@@ -51,11 +51,11 @@ bool TCPBridgeMessage::IsValid() const {
     return m_isValid;
 }
 
-const size_t TCPBridgeMessage::GetHeaderSize() {
+size_t TCPBridgeMessage::GetHeaderSize() {
     return HEADER_SIZE;
 }
 
-const size_t TCPBridgeMessage::GetSize() const {
+size_t TCPBridgeMessage::GetSize() const {
     return m_size;
 }
 
@@ -64,27 +64,48 @@ void TCPBridgeMessage::SetSize(const size_t s)
     m_size = s > MAX_PKT_SIZE ? MAX_PKT_SIZE : s;
 }
 
-void TCPBridgeMessage::BuildHeaderFooter(char *bytebuf) {
+void TCPBridgeMessage::BuildHeaderFooter(char *bytebuf) const
+{
     bytebuf[HEADER_IDX] = static_cast<uint8_t>(HEADER_TOKEN);
     bytebuf[SIZE_IDX] = m_size;
     bytebuf[CMD_IDX] = m_cmd;
     bytebuf[m_size-1] = static_cast<uint8_t>(TRAILER_TOKEN);
 }
 
-void TCPBridgeMessage::Serialize(char *bytebuf) {
+void TCPBridgeMessage::Serialize(char *bytebuf)
+{
     BuildHeaderFooter(bytebuf);
     FillData(bytebuf);
 }
 
-bool TCPBridgeMessage::ParseHeader(char *buf, TCPBridgeCommands *cmdType, size_t *pktLen) {
+bool TCPBridgeMessage::ParseHeader(char *buf, TCPBridgeCommands *cmdType, size_t *pktLen) 
+{
     *cmdType = static_cast<TCPBridgeCommands>(buf[CMD_IDX]);
     *pktLen = static_cast<size_t>(buf[SIZE_IDX]);
     
     return *pktLen <= MAX_PKT_SIZE;
 }
 
-TCPBridgeMessage::TCPBridgeCommands TCPBridgeMessage::GetCommand() const {
+TCPBridgeMessage::TCPBridgeCommands TCPBridgeMessage::GetCommand() const 
+{
     return m_cmd;
+}
+
+const canStreamerHeader_t TCPBridgeMessage::BuildHeader(const TCPBridgeCommands cmdType, uint8_t pktLen)
+{
+    canStreamerHeader_t header;
+    header.headerToken = HEADER_TOKEN;
+    header.commandId = static_cast<uint8_t>(cmdType);
+    header.packetSize = pktLen;
+
+    return header;
+}
+
+const canStreamerTrailer_t TCPBridgeMessage::BuildTrailer()
+{
+    canStreamerTrailer_t trailer;
+    trailer.trailerToken = TRAILER_TOKEN;
+    return trailer;
 }
 
 /**
@@ -95,7 +116,8 @@ ReadStreamPacket::ReadStreamPacket(const char *bytebuf)
     : TCPBridgeMessage(bytebuf) {
     if(IsValid())
     {
-        memcpy(&m_maxMessages, &bytebuf[MAX_MSGS_IDX], MAX_MSGS_SIZE);
+        // memcpy(&m_maxMessages, &bytebuf[MAX_MSGS_IDX], MAX_MSGS_SIZE);
+        memcpy(&m_messageStruct, bytebuf, sizeof(canStreamer_readStream_t));
     }
     else 
     {
@@ -104,9 +126,11 @@ ReadStreamPacket::ReadStreamPacket(const char *bytebuf)
 }
 
 ReadStreamPacket::ReadStreamPacket(const uint32_t maxMessages)
-    : TCPBridgeMessage(READ_STREAM_CMD, READ_STREAM_PKT_SIZE), m_maxMessages(maxMessages)
+    : TCPBridgeMessage(READ_STREAM_CMD, sizeof(canStreamer_readStream_t))
 {
-    // SetSize(READ_STREAM_PKT_SIZE);
+    m_messageStruct.header = BuildHeader(READ_STREAM_CMD, sizeof(canStreamer_readStream_t));
+    m_messageStruct.maxMessages = maxMessages;
+    m_messageStruct.trailer = BuildTrailer();
 }
 
 std::unique_ptr<TCPBridgeMessage> ReadStreamPacket::create(const char *bytebuf) 
@@ -114,12 +138,14 @@ std::unique_ptr<TCPBridgeMessage> ReadStreamPacket::create(const char *bytebuf)
     return std::make_unique<ReadStreamPacket>(bytebuf); 
 }
 
-void ReadStreamPacket::FillData(char *bytebuf) {
-    memcpy(&bytebuf[MAX_MSGS_IDX], &m_maxMessages, MAX_MSGS_SIZE);
+void ReadStreamPacket::FillData(char *bytebuf) 
+{
+    memcpy(bytebuf, &m_messageStruct, sizeof(m_messageStruct)); // TODO: implement this for all messages
 }
 
-const uint32_t ReadStreamPacket::GetMaxMessages() const {
-    return m_maxMessages;
+uint32_t ReadStreamPacket::GetMaxMessages() const
+{
+    return m_messageStruct.maxMessages;
 }
 
 /**
@@ -257,21 +283,42 @@ void CANMessagePacket::FillData(char *bytebuf) {
     memcpy(&bytebuf[DATA_IDX], &m_data, m_datasize);
 }
 
-const uint32_t CANMessagePacket::GetMessageID() const
+uint32_t CANMessagePacket::GetMessageID() const
 {
     return m_messageID;
 }
 
-const uint32_t CANMessagePacket::GetTimestamp() const
+uint32_t CANMessagePacket::GetTimestamp() const
 {
     return m_timestamp;
 }
 
-const uint8_t CANMessagePacket::GetDatasize() const
+uint8_t CANMessagePacket::GetDatasize() const
 {
     return m_datasize;
 }
 
-const uint8_t* CANMessagePacket::GetData() const {
+const uint8_t* CANMessagePacket::GetData() const 
+{
     return m_data;
+}
+
+/**
+ * InvalidPacket
+ */
+
+InvalidPacket::InvalidPacket()
+    : TCPBridgeMessage(INVALID_CMD, 0) 
+{
+
+}
+
+std::unique_ptr<TCPBridgeMessage> InvalidPacket::create() 
+{ 
+    return std::make_unique<InvalidPacket>();
+}
+
+void InvalidPacket::FillData(char *bytebuf) 
+{
+
 }
