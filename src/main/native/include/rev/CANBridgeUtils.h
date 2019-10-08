@@ -77,6 +77,8 @@ class CANBridge_CANFilter {
 
 void convert_wstring_to_string(const std::wstring& in, std::string& out); 
 void convert_string_to_wstring(const std::string& in, std::wstring& out);
+void convert_candle_to_wstring(const std::wstring& in, std::wstring& out);
+void convert_wstring_to_candle(const std::wstring& in, std::wstring& out);
 
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id); 
 

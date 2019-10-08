@@ -122,7 +122,7 @@ CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CAN
     return CANStatus::kOk;
 }
 
-CANStatus SerialDevice::GetCANStatus()
+CANStatus SerialDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
 {
     return CANStatus::kOk;
 }

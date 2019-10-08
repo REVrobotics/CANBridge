@@ -37,6 +37,7 @@
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
+#include "rev/CANBridgeUtils.h"
 
 #ifdef _WIN32
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
@@ -276,7 +277,9 @@ void CANBridge_UnregisterDeviceFromHAL(const wchar_t* descriptor)
 {
     std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>>::const_iterator device = CANDeviceList.begin();
     for ( ; device != CANDeviceList.end(); ) {
-        if (device->first.get()->GetDescriptor().compare(descriptor) == 0) {
+        std::wstring toCompare;
+        rev::usb::convert_wstring_to_candle(std::wstring(descriptor), toCompare);
+        if (device->first.get()->GetDescriptor().compare(toCompare) == 0) {
             device = CANDeviceList.erase(device);
             return;
         } else {

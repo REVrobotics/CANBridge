@@ -137,12 +137,21 @@ CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
 CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
 {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-    status = static_cast<int32_t>(CANStatus::kOk);    
+    *status = static_cast<int32_t>(CANStatus::kOk);    
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::GetCANStatus()
+CANStatus CandleWinUSBDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
 {
+    rev::usb::CANStatusDetails details;
+    m_thread.GetCANStatus(&details);
+    *busOff = details.busOffCount;
+    *txFull = details.txFullCount;
+    *receiveErr = details.receiveErrCount;
+    *transmitErr = details.transmitErrCount;
+    *percentBusUtilization = 0.0; // todo how to get this
+    *status = static_cast<int32_t>(CANStatus::kOk);    
+
     return CANStatus::kOk;
 }
 

@@ -140,7 +140,6 @@ public:
         } else {
             *status = CANStatus::kError;
         }
-        
         m_streamMutex.unlock();
     }
 
@@ -240,7 +239,6 @@ private:
                             } else {
                                 memcpy(msgData, data+4, 8*sizeof(uint8_t));
                             }
-
 
                             CANMessage msg(msgId, msgData, 8);
                             

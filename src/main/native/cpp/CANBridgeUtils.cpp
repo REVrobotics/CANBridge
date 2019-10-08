@@ -31,6 +31,8 @@
 #include <locale>
 #include <codecvt>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 namespace rev {
 namespace usb {
@@ -44,6 +46,56 @@ void convert_wstring_to_string(const std::wstring& in, std::string& out)
 void convert_string_to_wstring(const std::string& in, std::wstring& out) {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     out = converter.from_bytes(in.c_str());
+}
+
+void convert_candle_to_wstring(const std::wstring& in, std::wstring& out) {
+    std::wstring tmp;
+    
+    for (uint32_t i = 0; i < in.size(); i++) {
+        std::stringstream ss_in, ss_out;
+        std::string s;
+        
+        ss_in << "0x" << std::setfill('0') << std::setw(4) << std::hex << (int)in.at(i);
+        // std::cout << "in: " << ss_in.str() << std::endl;
+        uint32_t raw = std::stoi(ss_in.str(), 0, 16);
+        ss_out << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)(raw & 0xFF); 
+        // std::cout << "out: " << ss_out.str() << std::endl;
+        s = ss_out.str();
+
+        int c = std::stoi(s, 0, 16);
+        tmp += static_cast<wchar_t>(c);
+        ss_out.str("");
+        ss_out << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)(raw >> 8);
+        // std::cout << "out: " << ss_out.str() << std::endl;
+        s = ss_out.str();
+
+        c = std::stoi(s, 0, 16);
+        if (c != 0x00) {
+            tmp += static_cast<wchar_t>(c);     
+        }
+    }
+    out = std::wstring(tmp);
+}
+
+void convert_wstring_to_candle(const std::wstring& in, std::wstring& out) {
+    std::wstring tmp;
+
+    for (uint32_t i = 0; i < in.size(); i += 2) {
+        std::stringstream ss;
+        std::string s;
+        
+        if (i + 1 < in.size()) {
+            ss << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i+1);
+            ss  << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i);
+        } else {
+            ss << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i);
+        }
+        s = ss.str();
+
+        int c = std::stoi(s, 0, 16);
+        tmp += static_cast<wchar_t>(c);
+    }
+    out = std::wstring(tmp);
 }
 
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
