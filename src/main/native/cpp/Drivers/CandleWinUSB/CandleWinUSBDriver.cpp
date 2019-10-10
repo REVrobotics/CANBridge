@@ -52,10 +52,9 @@ std::vector<CANDeviceDetail> CandleWinUSBDriver::GetDevices()
         if (candle_list_length(clist, &num_interfaces)) {
             for (uint8_t i=0; i<num_interfaces; i++) {
                 if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring wpath;
-                    convert_candle_to_wstring(candle_dev_get_path(dev), wpath);
+                    std::string path = unicode_decode(candle_dev_get_path(dev));
                     std::string name(candle_dev_get_name(dev));
-                    retval.push_back({wpath, name, this->GetName()});
+                    retval.push_back({path, name, this->GetName()});
                 }
             }
         }
@@ -65,7 +64,7 @@ std::vector<CANDeviceDetail> CandleWinUSBDriver::GetDevices()
     return retval;
 }
 
-std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
+std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
     // Search driver layer for devices
     candle_list_handle clist;
@@ -76,9 +75,8 @@ std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const 
         if (candle_list_length(clist, &num_interfaces)) {
             for (uint8_t i=0; i<num_interfaces; i++) {
                 if (candle_dev_get(clist, i, &dev)) {
-                    std::wstring path;
-                    convert_candle_to_wstring(candle_dev_get_path(dev), path);
-                    if (path == std::wstring(descriptor)) {
+                    std::string path = unicode_decode(candle_dev_get_path(dev));
+                    if (path == std::string(descriptor)) {
                         return std::make_unique<CandleWinUSBDevice>(dev);
                     }
                 }

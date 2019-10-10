@@ -33,6 +33,12 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <locale>
+#include <vector>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 
 namespace rev {
 namespace usb {
@@ -48,55 +54,28 @@ void convert_string_to_wstring(const std::string& in, std::wstring& out) {
     out = converter.from_bytes(in.c_str());
 }
 
-void convert_candle_to_wstring(const std::wstring& in, std::wstring& out) {
-    std::wstring tmp;
+// Convert a wide Unicode string to ANSI string
+#if defined(_WIN32)
+std::string unicode_decode(const std::wstring &wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+	std::string strTo( size_needed, 0 );
+	WideCharToMultiByte(CP_ACP, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+	return strTo;
     
-    for (uint32_t i = 0; i < in.size(); i++) {
-        std::stringstream ss_in, ss_out;
-        std::string s;
-        
-        ss_in << "0x" << std::setfill('0') << std::setw(4) << std::hex << (int)in.at(i);
-        // std::cout << "in: " << ss_in.str() << std::endl;
-        uint32_t raw = std::stoi(ss_in.str(), 0, 16);
-        ss_out << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)(raw & 0xFF); 
-        // std::cout << "out: " << ss_out.str() << std::endl;
-        s = ss_out.str();
-
-        int c = std::stoi(s, 0, 16);
-        tmp += static_cast<wchar_t>(c);
-        ss_out.str("");
-        ss_out << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)(raw >> 8);
-        // std::cout << "out: " << ss_out.str() << std::endl;
-        s = ss_out.str();
-
-        c = std::stoi(s, 0, 16);
-        if (c != 0x00) {
-            tmp += static_cast<wchar_t>(c);     
-        }
-    }
-    out = std::wstring(tmp);
 }
 
-void convert_wstring_to_candle(const std::wstring& in, std::wstring& out) {
-    std::wstring tmp;
-
-    for (uint32_t i = 0; i < in.size(); i += 2) {
-        std::stringstream ss;
-        std::string s;
-        
-        if (i + 1 < in.size()) {
-            ss << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i+1);
-            ss  << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i);
-        } else {
-            ss << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)in.at(i);
-        }
-        s = ss.str();
-
-        int c = std::stoi(s, 0, 16);
-        tmp += static_cast<wchar_t>(c);
-    }
-    out = std::wstring(tmp);
+// Convert a ANSI string to wide Unicode string
+std::wstring unicode_encode(const std::string &str)
+{
+	int size_needed = MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
 }
+#endif
+
+
 
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
 {

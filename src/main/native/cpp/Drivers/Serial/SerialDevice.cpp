@@ -43,11 +43,13 @@ namespace usb {
 
 SerialDevice::SerialDevice(std::string port) :
     m_thread(port)
-{  
-    m_descriptor = std::wstring();
-    convert_string_to_wstring(port, m_descriptor);
-    m_name = "SPARK MAX";
-    m_thread.Start();
+{
+    m_descriptor = port;
+    m_name = "SPARK MAX";     
+    if (m_thread.ShouldRun()) {
+        m_thread.Start();
+        m_properlyOpened = true;
+    }
 
 }
 
@@ -62,7 +64,7 @@ std::string SerialDevice::GetName() const
 }
 
 
-std::wstring SerialDevice::GetDescriptor() const
+std::string SerialDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
@@ -74,9 +76,12 @@ int SerialDevice::GetId() const
 
 CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-   
-    m_thread.EnqueueMessage(msg, periodMs);
-    return CANStatus::kOk;
+    if (m_properlyOpened) {
+        m_thread.EnqueueMessage(msg, periodMs);
+        return CANStatus::kOk;
+    } else {
+        return CANStatus::kError;
+    }
 }
 
 CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
@@ -85,18 +90,22 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
    
     // parse through the keys, find the messges the match, and return it
     // The first in the message id, then the messages
-    std::map<uint32_t, CANMessage> messages;
-    m_thread.RecieveMessage(messages);
-    CANMessage mostRecent;
-    for (auto& m : messages) {
-        if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
-            mostRecent = m.second;
-            status = CANStatus::kOk;    
+    if (m_properlyOpened) {
+        std::map<uint32_t, CANMessage> messages;
+        m_thread.RecieveMessage(messages);
+        CANMessage mostRecent;
+        for (auto& m : messages) {
+            if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+                mostRecent = m.second;
+                status = CANStatus::kOk;    
+            }
         }
-    }
-    
-    if (status == CANStatus::kOk) {
-        msg = mostRecent;
+        
+        if (status == CANStatus::kOk) {
+            msg = mostRecent;
+        }
+    } else {
+        status = CANStatus::kError;
     }
 
     return status;
@@ -106,20 +115,31 @@ CANStatus SerialDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CAN
 {
     // Register the stream with the correct buffer size
     CANStatus stat = CANStatus::kOk;
-    m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
-    
+    if (m_properlyOpened) {
+        m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
+    } else {
+        stat = CANStatus::kError;
+    }
     return stat;
 }
 CANStatus SerialDevice::CloseStreamSession(uint32_t sessionHandle)
 {
-    m_thread.CloseStream(sessionHandle);
-    return CANStatus::kOk;
+    if (m_properlyOpened) {
+        m_thread.CloseStream(sessionHandle);
+        return CANStatus::kOk;
+    } else {
+        return CANStatus::kError;
+    }
 }
 CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
 {
-    m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-    status = static_cast<int32_t>(CANStatus::kOk);    
-    return CANStatus::kOk;
+    if (m_properlyOpened) {
+        m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
+        status = static_cast<int32_t>(CANStatus::kOk);    
+        return CANStatus::kOk;
+    } else {
+        return CANStatus::kError;
+    }
 }
 
 CANStatus SerialDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
@@ -129,7 +149,7 @@ CANStatus SerialDevice::GetCANStatus(float* percentBusUtilization, uint32_t* bus
 
 bool SerialDevice::IsConnected()
 {
-    return true;
+    return m_properlyOpened;
 }
 
 

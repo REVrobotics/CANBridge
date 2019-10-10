@@ -46,7 +46,7 @@ public:
     virtual ~CANDevice() {}
 
     virtual std::string GetName() const = 0;
-    virtual std::wstring GetDescriptor() const {return std::wstring();}
+    virtual std::string GetDescriptor() const {return std::string();}
 
     virtual int GetId() const = 0;
 

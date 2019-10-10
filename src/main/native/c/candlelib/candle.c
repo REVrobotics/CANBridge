@@ -20,6 +20,7 @@
 */
 
 #ifdef _WIN32
+#define UNICODE 1
 
 #include "candle.h"
 #include <stdlib.h>
@@ -41,7 +42,7 @@ static bool candle_read_device_name(HDEVINFO hdi, SP_DEVINFO_DATA* spDevInfoData
 	DWORD DataT;
 	DWORD nSize = 0;
 	dev->name[0] = '\0';
-	if (SetupDiGetDeviceRegistryProperty(hdi, spDevInfoData,
+	if (SetupDiGetDeviceRegistryPropertyA(hdi, spDevInfoData,
 		SPDRP_FRIENDLYNAME, &DataT, (PBYTE)dev->name, sizeof(dev->name), &nSize)) {
 		return true;
 	}

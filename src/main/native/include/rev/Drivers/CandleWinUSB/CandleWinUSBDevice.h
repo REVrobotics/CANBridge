@@ -48,7 +48,7 @@ public:
     virtual ~CandleWinUSBDevice();
 
     virtual std::string GetName() const;
-    virtual std::wstring GetDescriptor() const;
+    virtual std::string GetDescriptor() const;
 
     virtual int GetId() const;
 
@@ -64,7 +64,7 @@ public:
 private:
     candle_handle m_handle;
     CandleWinUSBDeviceThread m_thread;
-    std::wstring m_descriptor;
+    std::string m_descriptor;
     std::string m_name;
 };
 

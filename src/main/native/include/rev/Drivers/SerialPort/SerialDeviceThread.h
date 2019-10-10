@@ -76,32 +76,35 @@ public:
         try {
             if (!m_device.isOpen()) {
                 m_device.open();
+                m_run = true;
             } else {
-                std::cout << "COM port " << port << " already open" << std::endl;
+                std::cout << port << " already open" << std::endl;
             }
         } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
-            throw "Failed to open device!";
+            e.what();
+            m_run = false;
         }
    
     }
     ~SerialDeviceThread()
     {
-        m_device.close();
+        if (m_run) {
+            m_device.close();
+        }
     }
 
     void Start() {
-        //std::cout << "Starting Thread..." << std::endl;
+        // std::cout << "Starting Thread... " << std::this_thread::get_id() << std::endl;
         m_thread = std::thread (&SerialDeviceThread::run, this);
     }
 
     void Stop() {
-        //std::cout << "Stopping Thread..." << std::endl;
+        // std::cout << "Stopping Thread... " <<  std::this_thread::get_id() << std::endl;
         m_threadComplete = true;
         if (m_thread.joinable()) {
             m_thread.join();
         }
-        //std::cout << "Thread Stopped." << std::endl;
+        // std::cout << "Thread Stopped. " << std::this_thread::get_id() << std::endl;
     }
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
@@ -125,15 +128,13 @@ public:
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) {
         m_streamMutex.lock();
 
-        if (m_device.isOpen()) {
+        if (m_run && m_device.isOpen()) {
             // Create the handle
             *handle = counter++;
             
             uint8_t buffer[bufferSize] = {0x00, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
             m_device.write(buffer, bufferSize);
-
-            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
             // Add to the map
             m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
@@ -174,12 +175,17 @@ public:
         return halMsg;
     }
 
+    bool ShouldRun() {
+        return m_run;
+    }
+
 
 
 private:
     serial::Serial m_device;
     
     std::atomic_bool m_threadComplete;
+    std::atomic_bool m_run = false;
     std::thread m_thread;
     std::mutex m_sendMutex;
     std::mutex m_recvMutex;
@@ -199,7 +205,7 @@ private:
 
     void run() {
 
-        while (m_threadComplete == false) {
+        while (m_threadComplete == false && m_run) {
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
             
             // 1) Handle all recieved CAN traffic

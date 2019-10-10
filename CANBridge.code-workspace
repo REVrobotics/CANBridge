@@ -67,7 +67,8 @@
 			"cstdarg": "cpp",
 			"fstream": "cpp",
 			"sstream": "cpp",
-			"iomanip": "cpp"
+			"iomanip": "cpp",
+			"candle_defs.h": "c"
 		},
 		"java.configuration.updateBuildConfiguration": "disabled"
 	}

@@ -29,6 +29,7 @@
 #ifdef _WIN32
 
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+#include "rev/CANBridgeUtils.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -64,7 +65,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         throw "Failed to start device channel 0!";
     }
     
-    m_descriptor = candle_dev_get_path(m_handle);
+    m_descriptor = unicode_decode(candle_dev_get_path(m_handle));
     m_name = candle_dev_get_name(m_handle);
     m_thread.Start();
 }
@@ -83,7 +84,7 @@ std::string CandleWinUSBDevice::GetName() const
 }
 
 
-std::wstring CandleWinUSBDevice::GetDescriptor() const
+std::string CandleWinUSBDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
