@@ -45,6 +45,17 @@ public:
 
     virtual std::vector<CANDeviceDetail> GetDevices();
     virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
+
+    void SetTeamNumber(std::string);
+    std::string GetTeamNumber() const;
+    void SetPort(std::string);
+    std::string GetPort() const;
+    std::vector<std::string> GetHostList();
+
+private:
+    static inline const std::string defaultPort = "8800";
+    std::string m_teamNumber;
+    std::string m_port = defaultPort;
 };
 
 } // namespace usb

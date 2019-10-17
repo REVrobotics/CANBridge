@@ -38,27 +38,83 @@
 namespace rev {
 namespace usb {
 
+const std::string defaultPort("8800");
+
 std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
 {
     std::vector<CANDeviceDetail> retval;
-    // TODO: make this not hardcoded...
-    TCPBridgeDevice m_dev{"roboRIO-2714-FRC.local", "8800"};
-    if(m_dev.IsConnected()) {
-        retval.push_back({m_dev.GetDescriptor(), "roboRIO", this->GetName()});
+    std::vector<std::string> devs = GetHostList();
+    for(std::vector<std::string>::const_iterator it = devs.begin(); it != devs.end(); ++it)
+    {
+        TCPBridgeDevice m_dev{*it, GetPort()};
+        if(m_dev.IsConnected()) {
+            retval.push_back({m_dev.GetDescriptor(), "roboRIO", this->GetName()});
+        }
+        else
+            std::cout << "Could not connect" << std::endl;
     }
-    else
-        std::cout << "Could not connect" << std::endl;
 
     return retval;
 }
 
 std::unique_ptr<CANDevice> TCPBridgeDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
 {
-    std::string ipAddr;
-    convert_wstring_to_string(descriptor, ipAddr);
+    std::string s_descriptor;
+    convert_wstring_to_string(descriptor, s_descriptor);
 
-    // TODO: make this not hardcoded...
-    return std::make_unique<TCPBridgeDevice>("roboRIO-2714-FRC.local", "8800");
+    std::string delimiter = ":";
+    std::string host_name = s_descriptor.substr(0, s_descriptor.find(delimiter));
+    std::string port = s_descriptor.substr(s_descriptor.find(delimiter) + delimiter.length(), s_descriptor.length());
+
+    if(!host_name.empty() && !port.empty())
+    {
+        return std::make_unique<TCPBridgeDevice>(host_name, port);
+    }
+    else
+    {
+        std::cerr << "Invalid descriptor received: " << s_descriptor << std::endl;
+        return nullptr;
+    }
+}
+
+void TCPBridgeDriver::SetTeamNumber(std::string teamNumber)
+{
+    m_teamNumber = teamNumber;
+}
+
+std::string TCPBridgeDriver::GetTeamNumber() const
+{
+    return m_teamNumber;
+}
+
+void TCPBridgeDriver::SetPort(std::string port)
+{
+    m_port = port;
+}
+
+std::string TCPBridgeDriver::GetPort() const
+{
+    return m_port;
+}
+
+std::vector<std::string> TCPBridgeDriver::GetHostList()
+{
+    std::vector<std::string> hostList;
+
+    hostList.push_back("172.22.11.2"); // default ip when connected over usb
+
+    // if team number has been set
+    if(!m_teamNumber.empty())
+    {
+        std::string upperDigits = m_teamNumber.substr(0, 2);
+        std::string lowerDigits = m_teamNumber.substr(2, 2);
+        hostList.push_back("roborio-" + m_teamNumber + "-FRC");
+        hostList.push_back("10." + upperDigits + "." + lowerDigits + ".2"); // "10.xx.yy.2"
+        hostList.push_back("roborio-" + m_teamNumber + "-FRC.lan");
+        hostList.push_back("roborio-" + m_teamNumber + "-FRC.frc-field.local");
+    }
+
+    return hostList;
 }
 
 } // namespace usb

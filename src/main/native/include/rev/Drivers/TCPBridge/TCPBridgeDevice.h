@@ -69,6 +69,7 @@ public:
 private:
     std::string m_host;
     std::string m_port;
+    asio::ip::address m_ip;
 
     asio::io_service m_ioservice;
     tcp::socket m_sock;
@@ -76,6 +77,8 @@ private:
     std::wstring m_descriptor;
     std::string m_name;
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+    int m_verbosity = 5;
 
     bool m_isConnected{false};
     static constexpr size_t READ_BUF_SIZE = 512;

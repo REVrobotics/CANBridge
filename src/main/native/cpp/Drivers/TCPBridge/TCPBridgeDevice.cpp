@@ -53,23 +53,28 @@ bool TCPBridgeDevice::Connect()
 {
     try
     {
-        #if __TCP_DEBUG__
-        std::cout << "Connecting to " << m_host << ":" << m_port << std::endl;
-        #endif
+        if(m_verbosity > 0)
+        {
+            std::cout << "Resolving " << m_host << ":" << m_port << std::endl;
+        }
+
         asio::ip::tcp::resolver resolver(m_ioservice);
         asio::ip::tcp::resolver::query query(m_host, m_port);
         asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         asio::ip::tcp::resolver::iterator end;
 
-        asio::error_code error = asio::error::host_not_found;
-        while(error && endpoint_iterator != end) {
+        asio::error_code error = asio::error::netdb_errors::host_not_found;
+        while(error || endpoint_iterator != end) {
             m_sock.close();
             m_sock.connect(*endpoint_iterator++, error);
         }
     
         if(error)
         {
-            std::cerr << "Can't connect to CAN server" << std::endl; // TODO: more official error messages?
+            if(m_verbosity > 0)
+            {
+                std::cerr << "Can't connect!" << std::endl;
+            }
             return false;
         }
 
@@ -90,11 +95,15 @@ bool TCPBridgeDevice::Connect()
     std::string ipStr = m_sock.remote_endpoint().address().to_string();
     m_descriptor = converter.from_bytes(ipStr + ":" + m_port);
     m_name = ipStr;
+    m_ip = asio::ip::address::from_string(ipStr);
 
-    #if __TCP_DEBUG__
-    std::cout << "Connected to " << ipStr << std::endl;
-    #endif
+    if(m_verbosity > 0)
+    {
+        std::cout << "Connected to " << ipStr << ":" << m_port << std::endl;
+    }
 
+    std::this_thread::sleep_for (std::chrono::seconds(1));
+    
     return true;
 }
 
@@ -136,14 +145,19 @@ std::unique_ptr<TCPBridgeMessage> TCPBridgeDevice::ReadMessage(CANStatus &stat)
                 switch(cmdType)
                 {
                     case TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD:
+                        // std::cout << "READ_STREAM_CMD" << std::endl;
                         return ReadStreamPacket::create(m_readBuf);
                     case TCPBridgeMessage::TCPBridgeCommands::OPEN_STREAM_CMD:
+                        // std::cout << "OPEN_STREAM_CMD" << std::endl;
                         return OpenStreamPacket::create(m_readBuf);
                     case TCPBridgeMessage::TCPBridgeCommands::READ_MSG_CMD:
+                        // std::cout << "READ_MSG_CMD" << std::endl;
                         return ReadMessagePacket::create(m_readBuf);
                     case TCPBridgeMessage::TCPBridgeCommands::SEND_MSG_CMD:
+                        // std::cout << "SEND_MSG_CMD" << std::endl;
                         return SendMessagePacket::create(m_readBuf);
                     case TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD:
+                        // std::cout << "CAN_MSG_CMD" << std::endl;
                         return CANMessagePacket::create(m_readBuf);
                     default:
                         #if __TCP_DEBUG__
@@ -160,24 +174,44 @@ std::unique_ptr<TCPBridgeMessage> TCPBridgeDevice::ReadMessage(CANStatus &stat)
 
 size_t TCPBridgeDevice::Read(size_t bytesToRead, size_t bufOffset, CANStatus &stat)
 {
-    asio::error_code ec;
-    std::future<size_t> fut = std::async([this, bytesToRead, bufOffset, &ec]{ return this->m_sock.read_some(asio::buffer(m_readBuf + bufOffset, bytesToRead), ec);});
+    size_t readBytes = 0;
+    asio::error_code ec, ignored_ec;
+    constexpr std::chrono::milliseconds span(1000);
 
-    std::chrono::milliseconds span(500);
-    if(fut.wait_for(span) == std::future_status::timeout)
+    while(bytesToRead > 0)
     {
-        std::cerr << "Read from socket timed out" << std::endl;
-        stat = CANStatus::kTimeout;
-        return 0;
+        std::future<size_t> fut = std::async([this, bytesToRead, bufOffset, &ec]
+        { 
+            return this->m_sock.read_some(asio::buffer(this->m_readBuf + bufOffset, bytesToRead), ec);
+        });
+
+    
+        if(fut.wait_for(span) == std::future_status::timeout)
+        {
+            stat = CANStatus::kTimeout;
+            m_sock.cancel(ec);
+        }
+
+        size_t tmp;
+        tmp = fut.get();
+        readBytes += tmp;
+        bytesToRead -= tmp;
+        bufOffset += tmp;
+
+        if(ec == asio::error::basic_errors::interrupted)
+        {
+            stat = CANStatus::kTimeout;
+            break;
+        }
+        else if(ec)
+        {
+            stat = CANStatus::kError;
+            std::cout << "An error occured during call to socket read: " << ec << std::endl;
+            break;
+        }
     }
 
-    if(ec)
-    {
-        std::cerr << "Error raised during socket read: " << ec << std::endl;
-        stat = CANStatus::kError;
-    }
-
-    return fut.get();;
+    return readBytes;
 }
 
 std::string TCPBridgeDevice::GetName() const
