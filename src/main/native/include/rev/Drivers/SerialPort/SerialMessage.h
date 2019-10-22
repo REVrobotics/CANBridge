@@ -28,14 +28,14 @@
 
 #pragma once
 
-namespace rev {
-namespace usb {
+#include <stdint.h>
+#include <iostream>
 
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154 // to match WPILib HAL
-};
+const int CMD_API_PARAM_ACCESS = 0x300;
+const int SET_CONFIG_PARAM = 0x02051C00;
+const int GET_CONFIG_PARAM = 0x02051C40;
 
-} // namespace usb
-} // namespace rev
+bool IsValidSerialMessageId(uint16_t apiId);
+bool IsConfigParameter(uint16_t apiId);
+bool IsLegacyGetParam(uint32_t msgId);
+

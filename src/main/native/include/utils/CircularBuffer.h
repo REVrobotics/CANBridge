@@ -1,3 +1,31 @@
+/*
+ * Copyright (c) 2019 REV Robotics
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of REV Robotics nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #pragma once
 
 #include <iostream>
@@ -49,52 +77,6 @@ private:
     size_t tail = 0; // Youngest element
     size_t count = 0;
 };
-
-// template<typename T> CircularBuffer<T>::CircularBuffer(CircularBuffer<T>&& rhs)
-//     : size(std::move(rhs.size)), buffer(std::move(rhs.buffer)), head(std::move(rhs.head)), tail(std::move(rhs.tail))
-// {
-//     std::cout << "Move contructor" << std::endl;
-// }
-
-
-// template<typename T> CircularBuffer<T>& CircularBuffer<T>::operator=(CircularBuffer<T>& rhs)
-// {
-//     std::cout << "Copy constructor" << std::endl;
-//     size = std::move(rhs.size);
-//     buffer = std::move(rhs.buffer);
-//     head = std::move(rhs.head);
-//     tail = std::move(rhs.tail);
-//     return *this;
-// }
-
-// template<typename T> T& CircularBuffer<T>::operator[](size_t index)
-// {
-//     return const_cast<T&>(static_cast<const CircularBuffer<T>&>(*this)[index]);
-// }
-
-// template<typename T> bool CircularBuffer<T>::Add(const T &t) {
-//     if (IsFull()) {
-//         return false;
-//     } else {
-//         auto index = (tail == size - 1) ? 0 : tail + 1;
-//         buffer[index] = t;
-//         tail++;
-//         return true;
-//     }
-// }
-
-// template<typename T> std::vector<T> CircularBuffer<T>::Remove(uint32_t amount) {
-//     std::vector<T> toReturn(amount);
-//     if (!IsEmpty()) {
-//         while (amount > 0) {
-//             toReturn.push_back(buffer[head]);
-//             buffer.erase(buffer.begin() + head);
-//             head = (head == size - 1) ? 0 : head + 1;
-//             amount--;
-//         }
-//     }
-//     return toReturn;
-// }
 
 
 } // namespace utils

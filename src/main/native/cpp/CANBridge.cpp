@@ -42,6 +42,7 @@
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
 #endif
 
+#include "rev/Drivers/SerialPort/SerialDriver.h"
 #include "rev/Drivers/TCPBridge/TCPBridgeDriver.h"
 
 #include <mockdata/CanData.h>
@@ -60,7 +61,8 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
 #ifdef _WIN32
     new rev::usb::CandleWinUSBDriver(),
 #endif
-    new rev::usb::TCPBridgeDriver()
+    new rev::usb::SerialDriver(),
+    // new rev::usb::TCPBridgeDriver()
 };
 
 static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>> CANDeviceList = {};
@@ -154,8 +156,8 @@ void CANBridge_ReceiveMessageCallback(
 
     // 1) Recieve on all registered channels
     for (auto& dev : CANDeviceList) {
-            struct CANBridge_CANRecieve msg;
-            auto stat = dev.first->RecieveCANMessage(msg.m_message, *messageID, messageIDMask);
+        struct CANBridge_CANRecieve msg;
+        auto stat = dev.first->RecieveCANMessage(msg.m_message, *messageID, messageIDMask);
 
         if (rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId())) {
             msg.status = CANBridge_StatusToHALError(stat);
@@ -168,6 +170,8 @@ void CANBridge_ReceiveMessageCallback(
         *status = CANBridge_StatusToHALError(rev::usb::CANStatus::kError);
         return;
     }
+
+
 
     // 2) Return the newest message that does not have an error
     std::sort(recieves.begin(), recieves.end(), CANRecieveCompare);
@@ -185,11 +189,6 @@ void CANBridge_ReceiveMessageCallback(
 
             memcpy(data, recv.m_message.GetData(), *dataSize);
 
-            std::cout << "1) msg id: " << (int)recv.m_message.GetMessageId() << " data: ";//<< static_cast<uint16_t>((incomingFrame.can_id & 0xFFC0) >> 6) << " data: ";
-            for (int i = 0; i < 8; i++) {
-                std::cout << std::hex << (int)data[i] << "_";
-            }
-            std::cout << "\n";
             return;
         }
     }

@@ -26,16 +26,68 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <stdint.h>
+#include <iostream>
 
-namespace rev {
-namespace usb {
+#include "rev/Drivers/SerialPort/SerialMessage.h"
 
-enum class CANStatus {
-    kOk = 0,
-    kError = 1,
-    kTimeout = -1154 // to match WPILib HAL
+// Constant defines of valid message IDS for the serial communication
+const int CMD_API_CLEAR_FAULTS = 0x06E;
+const int CMD_API_DRV_STAT = 0x06A;
+const int CMD_API_BURN_FLASH = 0x072;
+const int CMD_API_SET_FOLLOWER = 0x073;
+const int CMD_API_FACTORY_DEFAULT = 0x074;
+const int CMD_API_FACTORY_RESET = 0x075;
+
+const int CMD_API_FIRMWARE = 0x098;
+
+const int CMD_API_SWDL_BOOTLOADER = 0x1FF;
+const int CMD_API_SWDL_DATA = 0x09C;
+const int CMD_API_SWDL_CHKSUM = 0x09D;
+const int CMD_API_SWDL_RETRANSMIT = 0x09E;
+
+const int ID_SIZE = 12;
+
+
+
+const int ValidIds[ID_SIZE] = {
+    CMD_API_CLEAR_FAULTS,
+    CMD_API_DRV_STAT,
+    CMD_API_BURN_FLASH,
+    CMD_API_SET_FOLLOWER,
+    CMD_API_FACTORY_DEFAULT,
+    CMD_API_FACTORY_RESET,
+    
+    CMD_API_FIRMWARE,
+
+    CMD_API_SWDL_BOOTLOADER,
+    CMD_API_SWDL_DATA,
+    CMD_API_SWDL_CHKSUM,
+    CMD_API_SWDL_RETRANSMIT,
+
+    CMD_API_PARAM_ACCESS
 };
 
-} // namespace usb
-} // namespace rev
+bool IsValidSerialMessageId(uint16_t apiId) {
+
+    for (int i = 0; i < ID_SIZE - 1; i++) {
+        if (ValidIds[i] == apiId) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+bool IsConfigParameter(uint16_t apiId) {
+    if (apiId > CMD_API_PARAM_ACCESS) {
+        return true;
+    }
+
+    return false;
+}
+
+bool IsLegacyGetParam(uint32_t msgId) {
+    return ((msgId & GET_CONFIG_PARAM) == GET_CONFIG_PARAM) || ((msgId & SET_CONFIG_PARAM) == SET_CONFIG_PARAM);
+}
+

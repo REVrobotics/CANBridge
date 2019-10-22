@@ -756,7 +756,7 @@ DLL bool __stdcall candle_frame_read(candle_handle hdev, candle_frame_t *frame, 
 		last_error = GetLastError();
         candle_prepare_read(dev, urb_num);
         dev->last_error = CANDLE_ERR_READ_RESULT;
-		dev->windows_last_error = GetLastError();
+		dev->windows_last_error = last_error;
         return false;
     }
 
