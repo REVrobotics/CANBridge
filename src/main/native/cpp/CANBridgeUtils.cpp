@@ -31,6 +31,14 @@
 #include <locale>
 #include <codecvt>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <locale>
+#include <vector>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 
 namespace rev {
 namespace usb {
@@ -45,6 +53,29 @@ void convert_string_to_wstring(const std::string& in, std::wstring& out) {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     out = converter.from_bytes(in.c_str());
 }
+
+// Convert a wide Unicode string to ANSI string
+#if defined(_WIN32)
+std::string unicode_decode(const std::wstring &wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+	std::string strTo( size_needed, 0 );
+	WideCharToMultiByte(CP_ACP, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+	return strTo;
+    
+}
+
+// Convert a ANSI string to wide Unicode string
+std::wstring unicode_encode(const std::string &str)
+{
+	int size_needed = MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
+}
+#endif
+
+
 
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id) 
 {

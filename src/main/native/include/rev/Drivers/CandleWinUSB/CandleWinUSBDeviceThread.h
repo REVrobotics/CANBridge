@@ -43,6 +43,7 @@
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
+#include "rev/CANStatus.h"
 
 #include "candlelib/candle.h"
 
@@ -145,6 +146,9 @@ public:
         return halMsg;
     }
 
+    void GetCANStatus(rev::usb::CANStatusDetails* details) {
+        details = &m_statusDetails;
+    }
 
 
 private:
@@ -158,6 +162,8 @@ private:
 
     // This is just a random number to start counting for the handles
     uint32_t m_counter = 0xe45b5597; 
+
+    CANStatusDetails m_statusDetails;
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, CANMessage> m_recvStore;
@@ -182,24 +188,41 @@ private:
                 // Recieved a new frame, store it
                 if (reading) {
                     CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
-
-                    // The queue is for streaming API, implement that here
-                    m_recvMutex.lock();
-                    if (msg.GetSize() != 0) {
-                        m_recvStore[incomingFrame.can_id] = msg;
-                    }
-                    m_recvMutex.unlock();
-
-                    m_streamMutex.lock();
-                    for (auto& stream : m_recvStream) {
-                        // Compare current size of the buffer to the max size of the buffer
-                        if (!stream.second->messages.IsFull()
-                            && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                            msg.GetMessageId())) {
-                            stream.second->messages.Add(msg);
+                    candle_frametype_t frameType = candle_frame_type(&incomingFrame);
+                    if(frameType == CANDLE_FRAMETYPE_ERROR) {
+                        // Parse error data
+                        if (incomingFrame.can_id & 0x00000040) {
+                            m_statusDetails.busOffCount++;
+                        } 
+                        if (incomingFrame.data[1] & 0x02) {
+                            m_statusDetails.txFullCount++;
                         }
+                        if (incomingFrame.data[1] & 0x10 || incomingFrame.data[1] & 0x04) {
+                            m_statusDetails.receiveErrCount++;
+                        }
+                        if (incomingFrame.data[1] & 0x20 || incomingFrame.data[1] & 0x08 || incomingFrame.data[2] & 0x80 || incomingFrame.data[4]) {
+                            m_statusDetails.transmitErrCount++;
+                        }
+                    } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
+
+                        // The queue is for streaming API, implement that here
+                        m_recvMutex.lock();
+                        if (msg.GetSize() != 0) {
+                            m_recvStore[incomingFrame.can_id] = msg;
+                        }
+                        m_recvMutex.unlock();
+
+                        m_streamMutex.lock();
+                        for (auto& stream : m_recvStream) {
+                            // Compare current size of the buffer to the max size of the buffer
+                            if (!stream.second->messages.IsFull()
+                                && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                                msg.GetMessageId())) {
+                                stream.second->messages.Add(msg);
+                            }
+                        }
+                        m_streamMutex.unlock();
                     }
-                    m_streamMutex.unlock();
                 }
             }
 

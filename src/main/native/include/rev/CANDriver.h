@@ -38,7 +38,7 @@ namespace rev {
 namespace usb {
 
 struct  CANDeviceDetail {
-    std::wstring descriptor;
+    std::string descriptor;
     std::string name;
     std::string driverName;
 };
@@ -50,7 +50,7 @@ public:
 
     virtual std::string GetName() const = 0;
     virtual std::vector<CANDeviceDetail> GetDevices() = 0;
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor) = 0;
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor) = 0;
 };
 
 } // namespace usb

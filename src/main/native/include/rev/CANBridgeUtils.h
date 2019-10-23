@@ -78,6 +78,12 @@ class CANBridge_CANFilter {
 void convert_wstring_to_string(const std::wstring& in, std::string& out); 
 void convert_string_to_wstring(const std::string& in, std::wstring& out);
 
+#if defined(_WIN32)
+std::string unicode_decode(const std::wstring &wstr);
+std::wstring unicode_encode(const std::string &wstr);
+#endif
+
+
 bool CANBridge_ProcessMask(const CANBridge_CANFilter& filter, uint32_t id); 
 
 bool CANMessageCompare(CANMessage& a, CANMessage& b);

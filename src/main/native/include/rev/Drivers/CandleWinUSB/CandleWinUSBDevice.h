@@ -48,7 +48,7 @@ public:
     virtual ~CandleWinUSBDevice();
 
     virtual std::string GetName() const;
-    virtual std::wstring GetDescriptor() const;
+    virtual std::string GetDescriptor() const;
 
     virtual int GetId() const;
 
@@ -58,13 +58,13 @@ public:
     virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
     virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status);
 
-    virtual CANStatus GetCANStatus();
+    virtual CANStatus GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status);
 
     virtual bool IsConnected();
 private:
     candle_handle m_handle;
     CandleWinUSBDeviceThread m_thread;
-    std::wstring m_descriptor;
+    std::string m_descriptor;
     std::string m_name;
 };
 

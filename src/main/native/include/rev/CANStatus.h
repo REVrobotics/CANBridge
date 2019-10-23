@@ -37,5 +37,13 @@ enum class CANStatus {
     kTimeout = -1154 // to match WPILib HAL
 };
 
+struct CANStatusDetails {
+    uint32_t busOffCount = 0;
+    uint32_t txFullCount = 0;
+    uint32_t receiveErrCount = 0;
+    uint32_t transmitErrCount = 0;
+};
+
+
 } // namespace usb
 } // namespace rev

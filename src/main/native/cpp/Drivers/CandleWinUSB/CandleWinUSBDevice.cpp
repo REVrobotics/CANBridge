@@ -29,6 +29,7 @@
 #ifdef _WIN32
 
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+#include "rev/CANBridgeUtils.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -64,7 +65,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         throw "Failed to start device channel 0!";
     }
     
-    m_descriptor = candle_dev_get_path(m_handle);
+    m_descriptor = unicode_decode(candle_dev_get_path(m_handle));
     m_name = candle_dev_get_name(m_handle);
     m_thread.Start();
 }
@@ -83,7 +84,7 @@ std::string CandleWinUSBDevice::GetName() const
 }
 
 
-std::wstring CandleWinUSBDevice::GetDescriptor() const
+std::string CandleWinUSBDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
@@ -137,12 +138,21 @@ CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
 CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
 {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-    status = static_cast<int32_t>(CANStatus::kOk);    
+    *status = static_cast<int32_t>(CANStatus::kOk);    
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::GetCANStatus()
+CANStatus CandleWinUSBDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
 {
+    rev::usb::CANStatusDetails details;
+    m_thread.GetCANStatus(&details);
+    *busOff = details.busOffCount;
+    *txFull = details.txFullCount;
+    *receiveErr = details.receiveErrCount;
+    *transmitErr = details.transmitErrCount;
+    *percentBusUtilization = 0.0; // todo how to get this
+    *status = static_cast<int32_t>(CANStatus::kOk);    
+
     return CANStatus::kOk;
 }
 

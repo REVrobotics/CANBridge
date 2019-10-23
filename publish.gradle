@@ -10,7 +10,7 @@ if (!hasProperty('releaseType')) {
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-def pubVersion = '0.1.3'
+def pubVersion = '0.1.5'
 
 def outputsFolder = file("$buildDir/allOutputs")
 

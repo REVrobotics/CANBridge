@@ -37,6 +37,7 @@
 #include "rev/CANDriver.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
+#include "rev/CANBridgeUtils.h"
 
 #ifdef _WIN32
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
@@ -90,7 +91,7 @@ int CANBridge_NumDevices(c_CANBridge_ScanHandle handle)
     return handle->devices.size();
 }
 
-const wchar_t* CANBridge_GetDeviceDescriptor(c_CANBridge_ScanHandle handle, size_t index)
+const char* CANBridge_GetDeviceDescriptor(c_CANBridge_ScanHandle handle, size_t index)
 {
     if (index >= handle->devices.size()) {
         return NULL;
@@ -257,7 +258,7 @@ static void CANBridge_RegisterHAL()
     }
 }
 
-void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId, uint32_t messageMask)
+void CANBridge_RegisterDeviceToHAL(const char* descriptor, uint32_t messageId, uint32_t messageMask)
 {
     CANBridge_RegisterHAL();
 
@@ -274,7 +275,7 @@ void CANBridge_RegisterDeviceToHAL(const wchar_t* descriptor, uint32_t messageId
     }
 }
 
-void CANBridge_UnregisterDeviceFromHAL(const wchar_t* descriptor) 
+void CANBridge_UnregisterDeviceFromHAL(const char* descriptor) 
 {
     std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>>::const_iterator device = CANDeviceList.begin();
     for ( ; device != CANDeviceList.end(); ) {
