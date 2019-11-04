@@ -48,11 +48,12 @@ typedef struct CANBridge_Scan* c_CANBridge_ScanHandle;
 c_CANBridge_ScanHandle CANBridge_Scan();
 
 /**
- * Returns the number of devices discovered by scan
+ * Returns the number of devices discovered by scan. Includes
+ * the device used as a bridge in the count of devices detected
  * 
  * @param previously opened c_CANBridge_ScanHandle
  * 
- * @return number of devices detected
+ * @return number of devices detected, including the bridge device
  */
 int CANBridge_NumDevices(c_CANBridge_ScanHandle handle);
 
