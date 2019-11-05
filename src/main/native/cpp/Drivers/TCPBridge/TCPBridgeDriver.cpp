@@ -57,10 +57,9 @@ std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
     return retval;
 }
 
-std::unique_ptr<CANDevice> TCPBridgeDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
+std::unique_ptr<CANDevice> TCPBridgeDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
-    std::string s_descriptor;
-    convert_wstring_to_string(descriptor, s_descriptor);
+    std::string s_descriptor(descriptor);
 
     std::string delimiter = ":";
     std::string host_name = s_descriptor.substr(0, s_descriptor.find(delimiter));

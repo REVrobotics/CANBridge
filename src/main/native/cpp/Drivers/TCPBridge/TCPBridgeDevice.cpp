@@ -26,11 +26,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "rev/Drivers/TCPBridge/TCPBridgeDevice.h"
-#include "rev/Drivers/TCPBridge/TCPBridgeMessage.h"
 
 #include <iostream>
 
 #define __TCP_DEBUG__   0 // change to 1 to print debug messages
+#define __TCP_VERBOSE__ 0
 
 #include <asio.hpp>
 using asio::ip::tcp;
@@ -46,17 +46,18 @@ TCPBridgeDevice::TCPBridgeDevice(const std::string host, const std::string port)
 
 TCPBridgeDevice::~TCPBridgeDevice()
 {
-
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    m_isConnected = false;
 }
 
 bool TCPBridgeDevice::Connect()
 {
     try
     {
-        if(m_verbosity > 0)
-        {
-            std::cout << "Resolving " << m_host << ":" << m_port << std::endl;
-        }
+        // if(m_verbosity > 0)
+        // {
+        //     std::cout << "Resolving " << m_host << ":" << m_port << std::endl;
+        // }
 
         asio::ip::tcp::resolver resolver(m_ioservice);
         asio::ip::tcp::resolver::query query(m_host, m_port);
@@ -93,7 +94,7 @@ bool TCPBridgeDevice::Connect()
 
     // convert the ip address we connected to into a string
     std::string ipStr = m_sock.remote_endpoint().address().to_string();
-    m_descriptor = converter.from_bytes(ipStr + ":" + m_port);
+    m_descriptor = ipStr + ":" + m_port;
     m_name = ipStr;
     m_ip = asio::ip::address::from_string(ipStr);
 
@@ -112,84 +113,137 @@ bool TCPBridgeDevice::IsConnected()
     return m_isConnected;
 }
 
-bool TCPBridgeDevice::WriteMessage(std::unique_ptr<TCPBridgeMessage> &msg)
+void TCPBridgeDevice::Disconnect()
+{
+    if(!m_isConnected) return;
+    // asio::error_code ec;
+    // m_sock.close(ec);
+    // if(ec)
+    // {
+    //     std::cerr << "Error closing socket: " << ec.category().name() << " - " 
+    //         << ec.message() << std::endl;
+    // }
+}
+
+bool TCPBridgeDevice::SendMsg()
 {
     size_t sentSize = 0;
     asio::error_code ec;
 
-    msg->Serialize(m_sendBuf);
-    sentSize = m_sock.send(asio::buffer(m_sendBuf, msg->GetSize()), 0, ec);
-
+    sentSize = m_sock.send(asio::buffer(&m_msg, TCPBridgePacketSizes[m_msg.header.commandId]), 0, ec);
     if(ec)
     {
-        std::cerr << "An exception occured while trying to send data: " << ec << std::endl;
+        std::cerr << "An exception occured while trying to send data - " << ec.category().name() << " - " 
+            << ec.message() << std::endl;
+        return false;
+    }
+
+    // printf("Sending %d bytes\n", TCPBridgePacketSizes[m_msg.header.commandId]);
+    // for(uint8_t i = 0; i < TCPBridgePacketSizes[m_msg.header.commandId]; i++) {
+    //     printf("\t%d: 0x%02X\n", i, *((uint8_t*)&m_msg + i));
+    // }
+    // printf("\n\n");
+
+    if(sentSize != TCPBridgePacketSizes[m_msg.header.commandId])
+    {
+        std::cerr << "Sent size does not match expected!" << std::endl;
+        return false; 
+    }
+
+    return true;
+}
+
+bool TCPBridgeDevice::RecvMsg(TCPBridgeCommands cmd)
+{
+    size_t readLen = 0, pktLen = 0;
+    asio::error_code ec;
+
+    // resync
+    while((readLen = Read(1)))
+    {
+        if(m_msg.header.headerToken == HEADER_TOKEN)
+        {
+            break;
+        }
+    }
+
+    if(readLen == 0) 
+    {
+        std::cerr << "Got nothing for header token..." << std::endl;
+        return false;
+    }
+
+    // read rest of header
+    if(!Read(sizeof(m_msg.header) - 1, 1))
+    {
+        std::cerr << "Couldn't read rest of header..." << std::endl;
+        return false;
+    }
+
+    // check header
+    if(m_msg.header.commandId >= INVALID_CMD)
+    {
+        std::cerr << "Invalid command rec'd..." << std::endl;
+        return false;
+    }
+
+    if(m_msg.header.packetSize != TCPBridgePacketSizes[m_msg.header.commandId])
+    {
+        std::cerr << "Packet size does not match expected..." << std::endl;
+        return false;
+    }
+
+    // read rest of packet
+    if(!Read(m_msg.header.packetSize - sizeof(m_msg.header), 4))
+    {
+        std::cerr << "Couldn't read rest of packet" << std::endl;
+        return false;
+    }
+
+    // printf("Rec'd %d bytes\n", m_msg.header.packetSize);
+    // for(uint8_t i = 0; i < m_msg.header.packetSize; i++) {
+    //     printf("\t%d: 0x%02X\n", i, *((uint8_t*)&m_msg + i));
+    // }
+    // printf("\n\n");
+
+    if(m_msg.header.commandId != cmd)
+    {
+        std::cerr << "Command does not match expected" << std::endl;
+        printf("Actual: 0x%02X, Expected: 0x%02X\n", m_msg.header.commandId, cmd);
+        return false;
+    }
+
+    if(*((uint8_t*)&m_msg + m_msg.header.packetSize - 1) != TRAILER_TOKEN) 
+    {
+        std::cerr << "Trailer does not match expected" << std::endl;
         return false;
     }
 
     return true;
 }
 
-std::unique_ptr<TCPBridgeMessage> TCPBridgeDevice::ReadMessage(CANStatus &stat)
-{
-    size_t pktLen = 0;
-    TCPBridgeMessage::TCPBridgeCommands cmdType = TCPBridgeMessage::INVALID_CMD;
-
-    // read header
-    if(Read(TCPBridgeMessage::GetHeaderSize(), 0, stat))
-    {
-        if(TCPBridgeMessage::ParseHeader(m_readBuf, &cmdType, &pktLen))
-        {
-            // read the rest of the message
-            if(Read(pktLen - TCPBridgeMessage::GetHeaderSize(), TCPBridgeMessage::GetHeaderSize(), stat))
-            {
-                switch(cmdType)
-                {
-                    case TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD:
-                        // std::cout << "READ_STREAM_CMD" << std::endl;
-                        return ReadStreamPacket::create(m_readBuf);
-                    case TCPBridgeMessage::TCPBridgeCommands::OPEN_STREAM_CMD:
-                        // std::cout << "OPEN_STREAM_CMD" << std::endl;
-                        return OpenStreamPacket::create(m_readBuf);
-                    case TCPBridgeMessage::TCPBridgeCommands::READ_MSG_CMD:
-                        // std::cout << "READ_MSG_CMD" << std::endl;
-                        return ReadMessagePacket::create(m_readBuf);
-                    case TCPBridgeMessage::TCPBridgeCommands::SEND_MSG_CMD:
-                        // std::cout << "SEND_MSG_CMD" << std::endl;
-                        return SendMessagePacket::create(m_readBuf);
-                    case TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD:
-                        // std::cout << "CAN_MSG_CMD" << std::endl;
-                        return CANMessagePacket::create(m_readBuf);
-                    default:
-                        #if __TCP_DEBUG__
-                        std::cerr << "Unknown command type found!" << std::endl;
-                        #endif
-                        break;
-                }
-            }
-        }
-    }
-
-    return InvalidPacket::create();
-}
-
-size_t TCPBridgeDevice::Read(size_t bytesToRead, size_t bufOffset, CANStatus &stat)
+size_t TCPBridgeDevice::Read(size_t bytesToRead, size_t bufOffset)
 {
     size_t readBytes = 0;
     asio::error_code ec, ignored_ec;
-    constexpr std::chrono::milliseconds span(1000);
+    std::chrono::milliseconds span(1000);
 
+    
     while(bytesToRead > 0)
     {
         std::future<size_t> fut = std::async([this, bytesToRead, bufOffset, &ec]
         { 
-            return this->m_sock.read_some(asio::buffer(this->m_readBuf + bufOffset, bytesToRead), ec);
+            return this->m_sock.read_some(
+                asio::buffer((char*)&this->m_msg + bufOffset, bytesToRead), ec);
         });
 
     
         if(fut.wait_for(span) == std::future_status::timeout)
         {
-            stat = CANStatus::kTimeout;
-            m_sock.cancel(ec);
+            std::cerr << "\nRead from socket timed out" << std::endl;
+            m_sock.close(ignored_ec);
+            m_isConnected = false;
+            return 0;
         }
 
         size_t tmp;
@@ -198,16 +252,11 @@ size_t TCPBridgeDevice::Read(size_t bytesToRead, size_t bufOffset, CANStatus &st
         bytesToRead -= tmp;
         bufOffset += tmp;
 
-        if(ec == asio::error::basic_errors::interrupted)
+        if(ec)
         {
-            stat = CANStatus::kTimeout;
-            break;
-        }
-        else if(ec)
-        {
-            stat = CANStatus::kError;
-            std::cout << "An error occured during call to socket read: " << ec << std::endl;
-            break;
+            std::cerr << "Error raised during socket read: " << 
+                ec.category().name() << " : " << ec.message() << std::endl;
+            return 0;
         }
     }
 
@@ -219,7 +268,7 @@ std::string TCPBridgeDevice::GetName() const
     return m_name;
 }
 
-std::wstring TCPBridgeDevice::GetDescriptor() const
+std::string TCPBridgeDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
@@ -229,156 +278,265 @@ int TCPBridgeDevice::GetId() const
     return 0;
 }
 
-CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, const int periodMs)
+CANStatus TCPBridgeDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-    #if __TCP_DEBUG__
-    printf("sending message\n");
-    printf("\tID: 0x%08X\n", msg.GetMessageId());
-    printf("\tPeriod: 0x%08X\n", periodMs);
-    printf("\tSize: 0x%08X\n\n", msg.GetSize());
-    #endif
-    std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<SendMessagePacket>(new SendMessagePacket(msg.GetMessageId(), periodMs, msg.GetSize(), msg.GetData()));
-    if(!WriteMessage(sendMsg))
-    {
+    if(!m_isConnected) {
+        std::cerr << "Aborting send - no longer connected!\n";
         return CANStatus::kError;
     }
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    int32_t status = 0;
+    #if __TCP_DEBUG__
+    printf("Send message\n");
+    printf("\tMessage Mask: 0x%08X\n", msg.GetMessageId());
+    printf("\tsize: %u\n", msg.GetSize());
+    printf("\tperiodMs: %d\n", periodMs);
+    #if __TCP_VERBOSE__
+    const uint8_t *data = msg.GetData();
+    for(uint8_t i = 0; i < msg.GetSize(); i++)
+        printf("\t%d: 0x%02X\n", i, data[i]);
+    #endif
+    #endif
+    SendMessage(msg.GetMessageId(), msg.GetData(), msg.GetSize(), periodMs, &status);
+    #if __TCP_DEBUG__
+    printf("\tstatus: %d\n", status);
+    #endif
+    return status == 0 ? CANStatus::kOk : CANStatus::kError;
+}
+
+CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
+{
+    if(!m_isConnected) {
+        std::cerr << "Aborting receive - no longer connected!\n";
+        return CANStatus::kError;
+    }
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    int32_t status = 0;
+    uint8_t dataSize = 0;
+    uint32_t timeStamp = 0;
+    uint8_t data[8];
+    #if __TCP_DEBUG__
+    printf("Receiving CAN Message\n");
+    printf("\tMessage Mask: 0x%08X\n", messageMask);
+    #endif
+    ReceiveMessage(&messageID, messageMask, data, &dataSize, &timeStamp, &status);
+    if(status == 0)
+    {
+        CANMessage newMsg{messageID, data, dataSize, timeStamp};
+        msg = newMsg;
+        #if __TCP_DEBUG__
+        printf("\tID: 0x%08X\n", msg.GetMessageId());
+        printf("\tstatus: %d\n", status);
+        #endif
+        return CANStatus::kOk;
+    }
+    else
+    {
+        #if __TCP_DEBUG__
+        printf("\tstatus: %d\n", status);
+        #endif
+        return CANStatus::kTimeout;
+    }
+}
+
+CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
+{
+    if(!m_isConnected) {
+        std::cerr << "Aborting open - no longer connected!\n";
+        return CANStatus::kError;
+    }
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    int32_t status = 0;
+    #if __TCP_DEBUG__
+    printf("Opening stream session\n");
+    printf("\tID: 0x%08X\n", filter.messageId);
+    printf("\tMask: 0x%08X\n", filter.messageMask);
+    printf("\tMax: %u\n", maxSize);
+    #endif
+    OpenStreamSession(sessionHandle, filter.messageId, filter.messageMask, maxSize, &status);
+    #if __TCP_DEBUG__
+    printf("\tStatus: %d\n", status);
+    printf("\tHandle: %u\n", *sessionHandle);
+    #endif
+    return status == 0 ? CANStatus::kOk : CANStatus::kError;
+}
+
+CANStatus TCPBridgeDevice::CloseStreamSession(uint32_t handle) {
+    if(!m_isConnected) {
+        std::cerr << "Aborting close - no longer connected!\n";
+        return CANStatus::kError;
+    }
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    #if __TCP_DEBUG__
+    printf("Closing stream session\n");
+    printf("\tHandle: %u\n", handle);
+    #endif
+    serializeCloseStreamPacket(&m_msg, handle);
+    
+    if(!SendMsg())
+        return CANStatus::kError;
+
+    if(!RecvMsg(CLOSE_STREAM_CMD))
+        return CANStatus::kError;
+
     return CANStatus::kOk;
 }
 
-CANStatus TCPBridgeDevice::RecieveCANMessage(CANMessage& msg, const uint32_t messageID, const uint32_t messageMask)
-{
-    // request message from server
-    #if __TCP_DEBUG__
-    printf("Receive message\n");
-    printf("\tID: 0x%08X\n", messageID);
-    printf("\tMask: 0x%08X\n", messageMask);
-    #endif
-    std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<ReadMessagePacket>(new ReadMessagePacket(messageID, messageMask));
-    if(!WriteMessage(sendMsg))
-    {
+CANStatus TCPBridgeDevice::GetCANStatus(float *percentBusUtilization,
+                                   uint32_t *busOffCount,
+                                   uint32_t *txFullCount,
+                                   uint32_t *receiveErrorCount,
+                                   uint32_t *transmitErrorCount,
+                                   int32_t *status) {
+    if(!m_isConnected) {
+        std::cerr << "Aborting get status - no longer connected!\n";
         return CANStatus::kError;
     }
-
-    // read response
-    // TCPBridgeMessage::TCPBridgeCommands cmd;
-    CANStatus stat = CANStatus::kOk;
-    std::unique_ptr<TCPBridgeMessage> readMsg;
-    readMsg = ReadMessage(stat);
-
-    if(readMsg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD)
-    {
-        auto rsMsg = dynamic_cast<ReadStreamPacket&>(*readMsg);
-
-        readMsg = ReadMessage(stat);
-
-        if(readMsg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD)
-        {
-            auto canMsg = dynamic_cast<CANMessagePacket&>(*readMsg);
-            msg = CANMessage(canMsg.GetMessageID(), canMsg.GetData(), canMsg.GetDatasize(), canMsg.GetTimestamp());
-            #if __TCP_DEBUG__
-            printf("Message: %d\n", 0);
-            printf("\tID: 0x%08X\n", msg.GetMessageId());
-            printf("\tTimestamp: %d\n", msg.GetTimestampUs());
-            printf("\tDatasize: 0x%02X\n", msg.GetSize());
-            #endif
-            return stat;
-        }
-    }
-
-    return stat;
-}
-
-CANStatus TCPBridgeDevice::OpenStreamSession(uint32_t* sessionHandle,
-                                             CANBridge_CANFilter filter,
-                                             uint32_t maxSize)
-{
-    std::unique_ptr<TCPBridgeMessage> sendMsg = std::unique_ptr<OpenStreamPacket>(new OpenStreamPacket(filter.messageId, filter.messageMask, maxSize));
-    if(!WriteMessage(sendMsg))
-    {
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    serializeBusUtilPacket(&m_msg, *percentBusUtilization, *busOffCount,  *txFullCount,  *receiveErrorCount,  *transmitErrorCount, *status);
+    if(!SendMsg())
         return CANStatus::kError;
-    }
+
+    if(!RecvMsg(BUS_UTIL_CMD))
+        return CANStatus::kError;
+
+    *percentBusUtilization = m_msg.busUtil.utilization;
+    *busOffCount = m_msg.busUtil.busOff;
+    *txFullCount = m_msg.busUtil.txFull;
+    *receiveErrorCount = m_msg.busUtil.receiveErr;
+    *transmitErrorCount = m_msg.busUtil.transmitErr;
+    *status = m_msg.busUtil.status;
+
     return CANStatus::kOk;
 }
 
-CANStatus TCPBridgeDevice::CloseStreamSession(uint32_t sessionHandle)
-{
-    // TODO
-    std::cerr << "Close stream not implemented" << std::endl;
+// Open a stream with the given parameters
+void TCPBridgeDevice::OpenStreamSession(uint32_t *handle, 
+                                          uint32_t messageId, 
+                                          uint32_t messageMask, 
+                                          uint32_t maxMessages, 
+                                          int32_t *status) {
+    serializeOpenStreamPacket(&m_msg, *handle, messageId, messageMask, maxMessages, *status);
+    if(!SendMsg())
+    {
+        *status = -1;
+        return;
+    }
+    
+    if(!RecvMsg(OPEN_STREAM_CMD))
+    {
+        *status = -1;
+        return;
+    }
 
-    return CANStatus::kError;
+    *handle = m_msg.openStream.handle;
+    *status = m_msg.openStream.status;
 }
 
 CANStatus TCPBridgeDevice::ReadStreamSession(uint32_t sessionHandle,
-                                             struct HAL_CANStreamMessage* msgs,
+                                             struct HAL_CANStreamMessage *messages,
                                              uint32_t messagesToRead,
-                                             uint32_t* messagesRead,
-                                             int32_t* status)
-{
-    *messagesRead = 0;
-    *status = 0; // TODO: something with this?
-    std::unique_ptr<TCPBridgeMessage> rsMsg = std::unique_ptr<ReadStreamPacket>(new ReadStreamPacket(messagesToRead));
+                                             uint32_t *messagesRead,
+                                             int32_t *status) {
+    if(!m_isConnected) {
+        std::cerr << "Aborting read - no longer connected!\n";
+        return CANStatus::kError;
+    }
+    std::lock_guard<std::mutex> lock(sock_mutex);
+    #if __TCP_DEBUG__
+    printf("Reading stream session\n");
+    printf("\tHandle: %u\n", sessionHandle);
+    printf("\tMessages to read: %u\n", messagesToRead);
+    #endif
+    serializeReadStreamPacket(&m_msg, sessionHandle, messagesToRead, *messagesRead, *status);
 
-    // TCPBridgeMessage::TCPBridgeCommands cmd;
-    CANStatus stat;
-    std::unique_ptr<TCPBridgeMessage> msg;
-
-    if(!WriteMessage(rsMsg))
+    if(!SendMsg())
     {
+        *status = -1;
         return CANStatus::kError;
     }
 
-    msg = ReadMessage(stat);
-
-    if(msg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::READ_STREAM_CMD)
+    if(!RecvMsg(READ_STREAM_CMD))
     {
-        auto rsmsg = dynamic_cast<ReadStreamPacket&>(*msg);
-        int missedMessage = 0;
-        while(*messagesRead < rsmsg.GetMaxMessages())
-        {
-            msg = ReadMessage(stat);
-
-            if(msg->GetCommand() == TCPBridgeMessage::TCPBridgeCommands::CAN_MSG_CMD)
-            {
-                auto canmsg = dynamic_cast<CANMessagePacket&>(*msg);
-                HAL_CANStreamMessage halMsg;
-                halMsg.messageID = canmsg.GetMessageID();
-                halMsg.timeStamp = canmsg.GetTimestamp();
-                halMsg.dataSize = canmsg.GetDatasize();
-                memcpy(&halMsg.data, canmsg.GetData(), canmsg.GetDatasize());
-                msgs[*messagesRead] = halMsg;
-
-                #if __TCP_DEBUG__                
-                printf("Message: %d\n", *messagesRead);
-                printf("\tID: 0x%08X\n", halMsg.messageID);
-                printf("\tTimestamp: %d\n", halMsg.timeStamp);
-                printf("\tDatasize: 0x%02X\n", halMsg.dataSize);
-                #endif
-                (*messagesRead)++;
-            }
-            else 
-            {
-                missedMessage++;
-
-                if(missedMessage > 10) { // TODO: this number is arbitrary
-                    // std::cerr << "Too many messages missed!" << std::endl;
-                    return CANStatus::kTimeout;
-                }
-                continue;
-            }
-        }
+        *status = -1;
+        return CANStatus::kError;
     }
-    else {
-        // std::cerr << "Unexpected message rec'd!" << std::endl;
-        return stat;
+
+    #if __TCP_DEBUG__
+    printf("\tMessages read: %u\n", m_msg.readStream.messagesRead);
+    printf("\tStatus: %d\n\n", m_msg.readStream.status);
+    #endif
+
+    *messagesRead = m_msg.readStream.messagesRead;
+    *status = m_msg.readStream.status;
+    for(uint32_t i = 0; i < *messagesRead; i++)
+    {
+        if(RecvMsg(CAN_MSG_CMD))
+        {
+            messages[i].messageID = m_msg.canMessage.messageId;
+            messages[i].timeStamp = m_msg.canMessage.timestamp;
+            messages[i].dataSize = m_msg.canMessage.datasize;
+            memcpy(messages[i].data, m_msg.canMessage.data, 8);
+
+            #if __TCP_DEBUG__
+            printf("Message %u of %u\n=================\n", i, *messagesRead);
+            printf("\tMessageId: 0x%08X\n", messages[i].messageID);
+            printf("\tTimestamp: %u\n", messages[i].timeStamp);
+            printf("\tDatasize: %u\n\n", messages[i].dataSize);
+            #if __TCP_VERBOSE__
+            for(uint8_t j = 0; j < messages[i].dataSize; j++)
+                printf("\t%d: 0x%02X\n", j, messages[i].data[j]);
+            #endif
+            printf("\n\n");
+            #endif
+        }
+        else
+        {
+            return CANStatus::kError;
+        }
     }
 
     return CANStatus::kOk;
 }
 
-CANStatus TCPBridgeDevice::GetCANStatus()
-{
-    // TODO: Should this do something?
-    return CANStatus::kOk;
+
+void TCPBridgeDevice::ReceiveMessage(uint32_t *messageId,
+                                     uint32_t messageMask,
+                                     uint8_t *data,
+                                     uint8_t *dataSize,
+                                     uint32_t *timeStamp,
+                                     int32_t *status) {
+    serializeReceiveMessagePacket(&m_msg, *messageId, messageMask, data, *dataSize, *timeStamp, *status);
+    
+    if(!SendMsg())
+    {
+        *status = -1;
+        return;
+    }
+
+    if(!RecvMsg(READ_MSG_CMD))
+    {
+        *status = -1;
+        return;
+    }
+
+    *messageId = m_msg.readMessage.messageId;
+    *dataSize = m_msg.readMessage.dataSize;
+    *timeStamp = m_msg.readMessage.timestamp;
+    *status = m_msg.readMessage.status;
+    memcpy(data, m_msg.readMessage.data, *dataSize > 8 ? 8 : *dataSize);
+}
+
+void TCPBridgeDevice::SendMessage(uint32_t messageId, 
+                                    const uint8_t *data, 
+                                    uint8_t dataSize, 
+                                    int32_t periodMs, 
+                                    int32_t *status) {
+    serializeSendMessagePacket(&m_msg, messageId, periodMs, dataSize, data, *status);
+    SendMsg();
+    RecvMsg(SEND_MSG_CMD);
+
+    *status = m_msg.sendMessage.status;
 }
 
 } // namespace usb

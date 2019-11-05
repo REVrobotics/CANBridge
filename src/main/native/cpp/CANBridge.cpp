@@ -63,7 +63,7 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
     new rev::usb::CandleWinUSBDriver(),
 #endif
     new rev::usb::SerialDriver(),
-    // new rev::usb::TCPBridgeDriver()
+    new rev::usb::TCPBridgeDriver()
 };
 
 static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>> CANDeviceList = {};

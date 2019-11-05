@@ -44,7 +44,7 @@ public:
     virtual std::string GetName() const {return "TCP Bridge";}
 
     virtual std::vector<CANDeviceDetail> GetDevices();
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const wchar_t* descriptor);
+    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor);
 
     void SetTeamNumber(std::string);
     std::string GetTeamNumber() const;
