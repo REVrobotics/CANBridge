@@ -44,6 +44,7 @@
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
 #include "rev/CANStatus.h"
+#include "rev/Drivers/DriverDeviceThread.h"
 
 #include "candlelib/candle.h"
 
@@ -54,218 +55,105 @@ namespace rev {
 namespace usb {
 
 
-class CandleWinUSBDeviceThread { 
+class CandleWinUSBDeviceThread :public DriverDeviceThread { 
 public:
     CandleWinUSBDeviceThread() =delete;
-    CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : 
-        m_device(dev),
-        m_threadComplete(false),
-        m_threadIntervalMs(threadIntervalMs)
+    CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs),
+        m_device(dev)
     {
-        //m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
+        m_run = true;
     }
     ~CandleWinUSBDeviceThread()
     {
     }
 
-    void Start() {
+    void Start() override {
         //std::cout << "Starting Thread..." << std::endl;
         m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
     }
 
-    void Stop() {
-        //std::cout << "Stopping Thread..." << std::endl;
-        m_threadComplete = true;
-        if (m_thread.joinable()) {
-            m_thread.join();
-        }
-        //std::cout << "Thread Stopped." << std::endl;
-    }
+   
 
-    bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
-        m_sendMutex.lock();
-        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
-        m_sendMutex.unlock();
-
-        // TODO: Limit the max queue size
-        return true;
-    }
-
-    bool RecieveMessage(std::map<uint32_t, CANMessage>& recvMap) {
-        // This needs to return all messages with the id, the it will handle which ones pass the mask
-        m_recvMutex.lock();
-        recvMap = m_recvStore;
-        m_recvMutex.unlock();
-
-        return true;
-    }
-
-    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize) {
+    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
         m_streamMutex.lock();
 
         // Create the handle
         *handle = m_counter++;
 
         // Add to the map
-        m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
+        m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
+
+        *status = CANStatus::kOk;
 
         m_streamMutex.unlock();
     }
 
-    void CloseStream(uint32_t handle) {
-        m_streamMutex.lock();
-        m_recvStream.erase(handle);
-        m_streamMutex.unlock();
-    }
-
-    // Return a vector of the messages, because pointer can't point to empty vector
-    // Use a circular buffer instead of just the vector
-    void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, uint32_t* messagesRead) {
-        m_streamMutex.lock();
-        *messagesRead = m_recvStream[handle]->messages.GetCount(); // first before remove
-
-        for (uint32_t i = 0; i < *messagesRead; i++) {
-            CANMessage m;
-            if (m_recvStream[handle]->messages.Remove(m)) {
-                messages[i] = ConvertCANRecieveToHALMessage(m);
-
-            }
-        }
-        m_streamMutex.unlock();
-        
-    }
-
-    static HAL_CANStreamMessage ConvertCANRecieveToHALMessage(rev::usb::CANMessage msg)
-    {
-        HAL_CANStreamMessage halMsg;
-        halMsg.timeStamp = msg.GetTimestampUs();
-        halMsg.messageID = msg.GetMessageId();
-        halMsg.dataSize = msg.GetSize();
-        memcpy(halMsg.data, msg.GetData(), sizeof(halMsg.data));
-
-        return halMsg;
-    }
-
-    void GetCANStatus(rev::usb::CANStatusDetails* details) {
-        details = &m_statusDetails;
-    }
 
 
 private:
     candle_handle m_device;
     
-    std::atomic_bool m_threadComplete;
-    std::thread m_thread;
-    std::mutex m_sendMutex;
-    std::mutex m_recvMutex;
-    std::mutex m_streamMutex;
+   void ReadMessages(bool &reading) {
+       candle_frame_t incomingFrame;
+        incomingFrame.can_id;
+    
+        reading = candle_frame_read(m_device, &incomingFrame, 0);
 
-    // This is just a random number to start counting for the handles
-    uint32_t m_counter = 0xe45b5597; 
+        // Recieved a new frame, store it
+        if (reading) {
+            CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
+            candle_frametype_t frameType = candle_frame_type(&incomingFrame);
+            if(frameType == CANDLE_FRAMETYPE_ERROR) {
+                // Parse error data
+                if (incomingFrame.can_id & 0x00000040) {
+                    m_statusDetails.busOffCount++;
+                } 
+                if (incomingFrame.data[1] & 0x02) {
+                    m_statusDetails.txFullCount++;
+                }
+                if (incomingFrame.data[1] & 0x10 || incomingFrame.data[1] & 0x04) {
+                    m_statusDetails.receiveErrCount++;
+                }
+                if (incomingFrame.data[1] & 0x20 || incomingFrame.data[1] & 0x08 || incomingFrame.data[2] & 0x80 || incomingFrame.data[4]) {
+                    m_statusDetails.transmitErrCount++;
+                }
+            } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
 
-    CANStatusDetails m_statusDetails;
+                // The queue is for streaming API, implement that here
+                m_readMutex.lock();
+                if (msg.GetSize() != 0) {
+                    m_readStore[incomingFrame.can_id] = msg;
+                }
+                m_readMutex.unlock();
 
-    std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
-    std::map<uint32_t, CANMessage> m_recvStore;
-    std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_recvStream; // (id, mask), max size, message buffer
-
-    long long m_threadIntervalMs;
-
-    void run() {
-        //std::cout << "Thread starting!" << std::endl;
-
-        while (m_threadComplete == false) {
-            auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
-
-            // 1) Handle all recieved CAN traffic
-            bool reading = true;
-            while (reading) {
-                candle_frame_t incomingFrame;
-                incomingFrame.can_id;
-            
-                reading = candle_frame_read(m_device, &incomingFrame, 0);
-
-                // Recieved a new frame, store it
-                if (reading) {
-                    CANMessage msg(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
-                    candle_frametype_t frameType = candle_frame_type(&incomingFrame);
-                    if(frameType == CANDLE_FRAMETYPE_ERROR) {
-                        // Parse error data
-                        if (incomingFrame.can_id & 0x00000040) {
-                            m_statusDetails.busOffCount++;
-                        } 
-                        if (incomingFrame.data[1] & 0x02) {
-                            m_statusDetails.txFullCount++;
-                        }
-                        if (incomingFrame.data[1] & 0x10 || incomingFrame.data[1] & 0x04) {
-                            m_statusDetails.receiveErrCount++;
-                        }
-                        if (incomingFrame.data[1] & 0x20 || incomingFrame.data[1] & 0x08 || incomingFrame.data[2] & 0x80 || incomingFrame.data[4]) {
-                            m_statusDetails.transmitErrCount++;
-                        }
-                    } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
-
-                        // The queue is for streaming API, implement that here
-                        m_recvMutex.lock();
-                        if (msg.GetSize() != 0) {
-                            m_recvStore[incomingFrame.can_id] = msg;
-                        }
-                        m_recvMutex.unlock();
-
-                        m_streamMutex.lock();
-                        for (auto& stream : m_recvStream) {
-                            // Compare current size of the buffer to the max size of the buffer
-                            if (!stream.second->messages.IsFull()
-                                && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                                msg.GetMessageId())) {
-                                stream.second->messages.Add(msg);
-                            }
-                        }
-                        m_streamMutex.unlock();
+                m_streamMutex.lock();
+                for (auto& stream : m_readStream) {
+                    // Compare current size of the buffer to the max size of the buffer
+                    if (!stream.second->messages.IsFull()
+                        && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                        msg.GetMessageId())) {
+                        stream.second->messages.Add(msg);
                     }
                 }
+                m_streamMutex.unlock();
             }
-
-            // 2) Schedule CANMessage queue
-            m_sendMutex.lock();
-            size_t queueSize = m_sendQueue.size();
-
-            for (size_t i=0;i<queueSize;i++) {
-                detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                m_sendQueue.pop();
-                if (el.m_intervalMs == -1) {
-                    continue;
-                }
-
-                auto now = std::chrono::steady_clock::now();
-
-                if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
-                    candle_frame_t frame;
-                    frame.can_dlc = el.m_msg.GetSize();
-                    frame.can_id = el.m_msg.GetMessageId();
-                    memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
-                    frame.timestamp_us = now.time_since_epoch().count() / 1000;
-
-                    // TODO: Feed back an error
-                    if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                        std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
-                    }
-                }
-
-                // Return to queue if repeated
-                if (el.m_intervalMs > 0 ) {
-                    el.m_prevTimestamp = now;
-                    m_sendQueue.push(el);
-                }
-            }
-
-            m_sendMutex.unlock();
-
-            // 3) Stall thread
-            std::this_thread::sleep_until(sleepTime);
         }
-        //std::cout << "Thread Killed!" << std::endl;
-    }
+   }
+
+   void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+        if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
+            candle_frame_t frame;
+            frame.can_dlc = el.m_msg.GetSize();
+            frame.can_id = el.m_msg.GetMessageId();
+            memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
+            frame.timestamp_us = now.time_since_epoch().count() / 1000;
+
+            // TODO: Feed back an error
+            if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
+                std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+            }
+        }
+   }
 }; 
 
 } // namespace usb

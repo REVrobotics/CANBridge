@@ -107,7 +107,7 @@ CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messag
     // parse through the keys, find the messges the match, and return it
     // The first in the message id, then the messages
     std::map<uint32_t, CANMessage> messages;
-    m_thread.RecieveMessage(messages);
+    m_thread.ReceiveMessage(messages);
     CANMessage mostRecent;
     for (auto& m : messages) {
         if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
@@ -125,10 +125,11 @@ CANStatus CandleWinUSBDevice::RecieveCANMessage(CANMessage& msg, uint32_t messag
 
 CANStatus CandleWinUSBDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
 {
+    CANStatus status;
     // Register the stream with the correct buffer size
-    m_thread.OpenStream(sessionHandle, filter, maxSize);
+    m_thread.OpenStream(sessionHandle, filter, maxSize, &status);
     
-    return CANStatus::kOk;
+    return status;
 }
 CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
 {

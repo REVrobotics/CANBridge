@@ -92,7 +92,7 @@ CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, u
     // The first in the message id, then the messages
     if (m_properlyOpened) {
         std::map<uint32_t, CANMessage> messages;
-        m_thread.RecieveMessage(messages);
+        m_thread.ReceiveMessage(messages);
         CANMessage mostRecent;
         for (auto& m : messages) {
             if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
