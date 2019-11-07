@@ -46,6 +46,7 @@ std::vector<CANDeviceDetail> TCPBridgeDriver::GetDevices()
     std::vector<std::string> devs = GetHostList();
     for(std::vector<std::string>::const_iterator it = devs.begin(); it != devs.end(); ++it)
     {
+        std::cerr << "Connecting to " << *it << ":" << GetPort();
         TCPBridgeDevice m_dev{*it, GetPort()};
         if(m_dev.IsConnected()) {
             retval.push_back({m_dev.GetDescriptor(), "roboRIO", this->GetName()});

@@ -34,6 +34,7 @@
 #include <codecvt>
 #include <mutex>
 
+#include "rev/Drivers/TCPBridge/TCPBridgeDeviceThread.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
@@ -58,41 +59,20 @@ public:
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
     virtual CANStatus RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask) override;
     virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
-    virtual CANStatus CloseStreamSession(uint32_t sessionHandle) override;
-    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status) override;
-    virtual CANStatus GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status) override;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status);
+
+    virtual CANStatus GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status);
 
     virtual bool IsConnected();
-    void Disconnect();
-    virtual bool Connect();
+
+    bool Connect();
 
 private:
-    std::string m_host;
-    std::string m_port;
-    asio::ip::address m_ip;
-
-    asio::io_service m_ioservice;
-    asio::ip::tcp::socket m_sock;
-
+    TCPBridgeDeviceThread m_thread;
     std::string m_descriptor;
     std::string m_name;
-
-    int m_verbosity = 5;
-    bool m_isConnected{false};
-
-    std::mutex sock_mutex;
-
-    TCPBridgeMessages_t m_msg;
-
-    bool SendMsg();
-    bool Recv(void *buf, uint8_t bytesToRead);
-    bool RecvMsg(TCPBridgeCommands cmd);
-    size_t Read(size_t bytesToRead, size_t bufOffset = 0);
-
-    void OpenStreamSession(uint32_t *handle, uint32_t messageId, uint32_t messageMask, uint32_t maxMessages, int32_t *status);
-    void ReceiveMessage(uint32_t* messageId, uint32_t messageMask, uint8_t* data, uint8_t* dataSize, uint32_t* timeStamp, int32_t* status);
-    void SendMessage(uint32_t messageID, const uint8_t *data, uint8_t dataSize, int32_t periodMs, int32_t *status);
-    void SendReadStream(uint32_t maxMessages, canStreamer_readStream_t *response);
+    bool m_properlyOpened = false;
 };
 
 } // namespace usb
