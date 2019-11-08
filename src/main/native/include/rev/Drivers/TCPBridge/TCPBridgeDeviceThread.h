@@ -119,6 +119,15 @@ public:
         m_thread = std::thread(&TCPBridgeDeviceThread::run, this);
     }
 
+    bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
+        m_sendMutex.lock();
+        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+        m_sendMutex.unlock();
+
+        // TODO: Limit the max queue size
+        return true;
+    }
+
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
         m_streamMutex.lock();
 
