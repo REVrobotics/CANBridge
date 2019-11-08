@@ -341,7 +341,8 @@ Serial::SerialImpl::read (uint8_t *buf, size_t size)
   if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
     stringstream ss;
     ss << "Error while reading from the serial port: " << GetLastError();
-    THROW (IOException, ss.str().c_str());
+    printf(ss.str().c_str());
+    // THROW (IOException, ss.str().c_str());
   }
   return (size_t) (bytes_read);
 }

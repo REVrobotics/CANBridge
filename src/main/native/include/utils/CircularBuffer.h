@@ -31,6 +31,8 @@
 #include <iostream>
 #include <vector>
 
+namespace rev {
+namespace usb {
 namespace utils {
 
 template<typename T> class CircularBuffer {
@@ -78,5 +80,6 @@ private:
     size_t count = 0;
 };
 
-
 } // namespace utils
+} // namespace usb
+} // namespace rev
