@@ -165,7 +165,7 @@ void CANBridge_ReceiveMessageCallback(
 
     if (recieves.size() == 0) {
         // TODO: what is the correct error return here
-        *status = CANBridge_StatusToHALError(rev::usb::CANStatus::kError);
+        *status = HAL_ERR_CANSessionMux_MessageNotFound;
         return;
     }
 
@@ -192,7 +192,7 @@ void CANBridge_ReceiveMessageCallback(
     }
 
     // 3) Return an error if necessary
-    *status = recieves[0].status;
+    *status = HAL_ERR_CANSessionMux_MessageNotFound;
 }
 
 /**
