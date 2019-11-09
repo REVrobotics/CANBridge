@@ -2,11 +2,22 @@ plugins {
   id 'c'
   id 'cpp'
   id 'java'
-  id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '2.2'
-  id 'edu.wpi.first.NativeUtils' version '2019.5.15'
-  id 'edu.wpi.first.GradleJni' version '0.9.0'
-  id 'edu.wpi.first.GradleVsCode' version '0.9.0'
+  id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.1'
+  id 'edu.wpi.first.NativeUtils' version '2020.4.1'
+  id 'edu.wpi.first.GradleJni' version '0.9.1'
+  id 'edu.wpi.first.GradleVsCode' version '0.9.6'
   id 'google-test-test-suite'
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+    if (project.hasProperty('releaseMode')) {
+        wpilibRepositories.addAllReleaseRepositories(it)
+    } else {
+        wpilibRepositories.addAllDevelopmentRepositories(it)
+    }
 }
 
 apply from: 'config.gradle'
@@ -28,7 +39,7 @@ nativeUtils {
       exportsFile = project.file("src/main/native/cpp/serial/symbols.txt")
     }
   }
-  
+
 }
 
 model {
@@ -100,7 +111,7 @@ model {
         }
       }
     }
-    
+
   }
 
   testSuites {
@@ -119,8 +130,9 @@ model {
       binaries.all {
         lib library: "CandleLib", linkage: 'static'
         lib library: "SerialLib", linkage: 'static'
-        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio 
-            || it.targetPlatform.name == nativeUtils.wpi.platforms.raspbian) {
+        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio
+            || it.targetPlatform.name == nativeUtils.wpi.platforms.raspbian
+            || it.targetPlatform.name == nativeUtils.wpi.platforms.aarch64bionic) {
           it.buildable = false
         }
         // lib library: "SparkMaxDriver", linkage: 'shared'
