@@ -73,7 +73,7 @@ model {
         }
       }
 
-      nativeUtils.useRequiredLibrary(it, "wpilib_shared")
+      nativeUtils.useRequiredLibrary(it, "driver_shared")
     }
     CandleLib(NativeLibrarySpec) {
       sources {
@@ -137,7 +137,7 @@ model {
         }
         // lib library: "SparkMaxDriver", linkage: 'shared'
       }
-      nativeUtils.useRequiredLibrary(it, "wpilib_shared", "googletest_static")
+      nativeUtils.useRequiredLibrary(it, "driver_shared", "googletest_static")
     }
   }
 }
