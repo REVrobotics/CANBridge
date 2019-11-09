@@ -137,13 +137,13 @@ void CANBridge_SendMessageCallback(const char* name, void* param,
 }
 
 struct CANBridge_CANRecieve {
-    rev::usb::CANMessage m_message;
+    std::shared_ptr<rev::usb::CANMessage> m_message;
     int32_t status;
 };
 
 static bool CANRecieveCompare(struct CANBridge_CANRecieve a, struct CANBridge_CANRecieve b)
 {   
-    return rev::usb::CANMessageCompare(a.m_message, b.m_message);
+    return rev::usb::CANMessageCompare(*a.m_message, *b.m_message);
 } 
 
 void CANBridge_ReceiveMessageCallback(
@@ -157,7 +157,7 @@ void CANBridge_ReceiveMessageCallback(
         struct CANBridge_CANRecieve msg;
         auto stat = dev.first->RecieveCANMessage(msg.m_message, *messageID, messageIDMask);
 
-        if (rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message.GetMessageId())) {
+        if (stat == rev::usb::CANStatus::kOk && rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message->GetMessageId())) {
             msg.status = CANBridge_StatusToHALError(stat);
             recieves.push_back(msg);
         }
@@ -175,17 +175,19 @@ void CANBridge_ReceiveMessageCallback(
     std::sort(recieves.begin(), recieves.end(), CANRecieveCompare);
 
     for (auto& recv : recieves) {
-        if (recv.status == 0) {
-            *timeStamp = recv.m_message.GetTimestampUs();
+        if (recv.status == 0 && recv.m_message->isNew()) {
+            *timeStamp = recv.m_message->GetTimestampUs();
             *status = recv.status;
-            *messageID = recv.m_message.GetMessageId();
-            *dataSize = recv.m_message.GetSize();
+            *messageID = recv.m_message->GetMessageId();
+            *dataSize = recv.m_message->GetSize();
 
             if(*dataSize > 8) {
                 *dataSize = 8;
             }            
 
-            memcpy(data, recv.m_message.GetData(), *dataSize);
+            memcpy(data, recv.m_message->GetData(), *dataSize);
+
+            recv.m_message->setIsNew(false);
 
             return;
         }

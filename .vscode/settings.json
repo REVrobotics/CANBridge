@@ -62,5 +62,6 @@
         "xlocmes": "cpp",
         "xlocmon": "cpp",
         "xloctime": "cpp"
-    }
+    },
+    "C_Cpp.default.configurationProvider": "vscode-wpilib"
 }

@@ -113,7 +113,7 @@ public:
         return true;
     }
 
-    bool RecieveMessage(std::map<uint32_t, CANMessage>& recvMap) {
+    bool RecieveMessage(std::map<uint32_t, std::shared_ptr<CANMessage>>& recvMap) {
         // This needs to return all messages with the id, the it will handle which ones pass the mask
         m_recvMutex.lock();
         recvMap = m_recvStore;
@@ -190,7 +190,7 @@ private:
     uint32_t counter = 0xa45b5597; // Change to be unique relative to CandleWinUSBDeviceThread
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
-    std::map<uint32_t, CANMessage> m_recvStore;
+    std::map<uint32_t, std::shared_ptr<CANMessage>> m_recvStore;
     std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_recvStream; // (id, mask), max size, message buffer
 
     long long m_threadIntervalMs;
@@ -242,10 +242,10 @@ private:
                             }
 
 
-                            CANMessage msg(msgId, msgData, 8);
+                            auto msg = std::make_shared<CANMessage>(msgId, msgData, 8);
                             
                             m_recvMutex.lock();
-                            if (msg.GetSize() != 0) {
+                            if (msg->GetSize() != 0) {
                                 m_recvStore[msgId] = msg;
                             }
                             m_recvMutex.unlock();
@@ -255,8 +255,8 @@ private:
                                 // Compare current size of the buffer to the max size of the buffer
                                 if (!stream.second->messages.IsFull()
                                     && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                                    msg.GetMessageId())) {
-                                    stream.second->messages.Add(msg);
+                                    msg->GetMessageId())) {
+                                    stream.second->messages.Add(*msg);
                                 }
                             }
                             m_streamMutex.unlock();

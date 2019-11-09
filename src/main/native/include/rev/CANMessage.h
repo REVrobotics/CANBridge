@@ -149,6 +149,14 @@ public:
         return true;
     }
 
+    bool isNew() const {
+        return m_isNew;
+    }
+
+    void setIsNew(bool isNew) {
+        m_isNew = isNew;
+    }
+
     uint32_t GetTimestampUs() const {
         return m_timestamp;
     }
@@ -170,6 +178,7 @@ private:
     uint8_t m_size;
     uint32_t m_messageId;
     uint32_t m_timestamp;
+    bool m_isNew{true};
 };
 
 } // namespace usb

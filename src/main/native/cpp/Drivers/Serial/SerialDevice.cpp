@@ -79,17 +79,17 @@ CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
     return CANStatus::kOk;
 }
 
-CANStatus SerialDevice::RecieveCANMessage(CANMessage& msg, uint32_t messageID, uint32_t messageMask)
+CANStatus SerialDevice::RecieveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask)
 {
     CANStatus status = CANStatus::kTimeout;
    
     // parse through the keys, find the messges the match, and return it
     // The first in the message id, then the messages
-    std::map<uint32_t, CANMessage> messages;
+    std::map<uint32_t, std::shared_ptr<CANMessage>> messages;
     m_thread.RecieveMessage(messages);
-    CANMessage mostRecent;
+    std::shared_ptr<CANMessage> mostRecent;
     for (auto& m : messages) {
-        if (CANBridge_ProcessMask({m.second.GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+        if (CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
             mostRecent = m.second;
             status = CANStatus::kOk;    
         }
