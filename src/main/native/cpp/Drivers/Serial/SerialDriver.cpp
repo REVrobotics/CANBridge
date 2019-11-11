@@ -51,7 +51,7 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-        if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0 && SerialDevice(dev.port).IsConnected()) {
+        if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
             std::string name("SPARK MAX"); 
             retval.push_back({dev.port, name, this->GetName()}); 
         }
