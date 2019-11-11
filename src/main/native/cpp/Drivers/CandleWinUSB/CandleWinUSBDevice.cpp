@@ -29,6 +29,7 @@
 #ifdef _WIN32
 
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDevice.h"
+#include "rev/CANBridgeUtils.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
@@ -64,7 +65,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         throw "Failed to start device channel 0!";
     }
     
-    m_descriptor = candle_dev_get_path(m_handle);
+    m_descriptor = unicode_decode(candle_dev_get_path(m_handle));
     m_name = candle_dev_get_name(m_handle);
     m_thread.Start();
 }
@@ -83,7 +84,7 @@ std::string CandleWinUSBDevice::GetName() const
 }
 
 
-std::wstring CandleWinUSBDevice::GetDescriptor() const
+std::string CandleWinUSBDevice::GetDescriptor() const
 {
     return m_descriptor;
 }
@@ -99,14 +100,14 @@ CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::RecieveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask)
+CANStatus CandleWinUSBDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask)
 {
     CANStatus status = CANStatus::kTimeout;
    
     // parse through the keys, find the messges the match, and return it
     // The first in the message id, then the messages
     std::map<uint32_t, std::shared_ptr<CANMessage>> messages;
-    m_thread.RecieveMessage(messages);
+    m_thread.ReceiveMessage(messages);
     std::shared_ptr<CANMessage> mostRecent;
     for (auto& m : messages) {
         if (CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
@@ -124,10 +125,11 @@ CANStatus CandleWinUSBDevice::RecieveCANMessage(std::shared_ptr<CANMessage>& msg
 
 CANStatus CandleWinUSBDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize)
 {
+    CANStatus status;
     // Register the stream with the correct buffer size
-    m_thread.OpenStream(sessionHandle, filter, maxSize);
+    m_thread.OpenStream(sessionHandle, filter, maxSize, &status);
     
-    return CANStatus::kOk;
+    return status;
 }
 CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
 {
@@ -137,12 +139,21 @@ CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
 CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
 {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-    status = static_cast<int32_t>(CANStatus::kOk);    
+    *status = static_cast<int32_t>(CANStatus::kOk);    
     return CANStatus::kOk;
 }
 
-CANStatus CandleWinUSBDevice::GetCANStatus()
+CANStatus CandleWinUSBDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
 {
+    rev::usb::CANStatusDetails details;
+    m_thread.GetCANStatus(&details);
+    *busOff = details.busOffCount;
+    *txFull = details.txFullCount;
+    *receiveErr = details.receiveErrCount;
+    *transmitErr = details.transmitErrCount;
+    *percentBusUtilization = 0.0; // todo how to get this
+    *status = static_cast<int32_t>(CANStatus::kOk);    
+
     return CANStatus::kOk;
 }
 

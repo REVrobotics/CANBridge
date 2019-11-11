@@ -46,17 +46,17 @@ public:
     virtual ~CANDevice() {}
 
     virtual std::string GetName() const = 0;
-    virtual std::wstring GetDescriptor() const {return std::wstring();}
+    virtual std::string GetDescriptor() const {return std::string();}
 
     virtual int GetId() const = 0;
 
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) = 0;
-    virtual CANStatus RecieveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) = 0;
+    virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) = 0;
     virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) = 0;
     virtual CANStatus CloseStreamSession(uint32_t sessionHandle) = 0;
     virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status) = 0;
 
-    virtual CANStatus GetCANStatus() = 0;
+    virtual CANStatus GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status) = 0;
 
     virtual bool IsConnected() = 0;
 };

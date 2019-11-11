@@ -52,25 +52,21 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
         if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
-            std::wstring desc;
-            convert_string_to_wstring(dev.port, desc);
             std::string name("SPARK MAX"); 
-            retval.push_back({desc, name, this->GetName()}); 
+            retval.push_back({dev.port, name, this->GetName()}); 
         }
     }
 
     return retval;
 }
 
-std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const wchar_t* descriptor)
+std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
     // Search driver layer for devices
    
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-            std::wstring path;
-            convert_string_to_wstring(dev.port, path);
-            if (path == std::wstring(descriptor)) {
+            if (dev.port == std::string(descriptor)) {
                 return std::make_unique<SerialDevice>(dev.port);
             }
     }

@@ -45,6 +45,7 @@
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
 #include "rev/CANStatus.h"
+#include "rev/Drivers/DriverDeviceThread.h"
 
 #include "SerialMessage.h"
 
@@ -57,12 +58,10 @@ namespace rev {
 namespace usb {
 
 
-class SerialDeviceThread { 
+class SerialDeviceThread : public DriverDeviceThread { 
 public:
     SerialDeviceThread() =delete;
-    SerialDeviceThread(std::string port, long long threadIntervalMs = 1) : 
-        m_threadComplete(false),
-        m_threadIntervalMs(threadIntervalMs)
+    SerialDeviceThread(std::string port, long long threadIntervalMs = 1) : DriverDeviceThread(0xa45b5597, threadIntervalMs)
     {
         serial::Timeout timeout = serial::Timeout::simpleTimeout(1);
         m_device.setPort(port);
@@ -76,278 +75,168 @@ public:
         try {
             if (!m_device.isOpen()) {
                 m_device.open();
+                m_run = true;
             } else {
-                std::cout << "COM port " << port << " already open" << std::endl;
+                std::cout << port << " already open" << std::endl;
             }
         } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
-            throw "Failed to open device!";
+            e.what();
+            m_run = false;
         }
    
     }
     ~SerialDeviceThread()
     {
-        m_device.close();
-    }
-
-    void Start() {
-        //std::cout << "Starting Thread..." << std::endl;
-        m_thread = std::thread (&SerialDeviceThread::run, this);
-    }
-
-    void Stop() {
-        //std::cout << "Stopping Thread..." << std::endl;
-        m_threadComplete = true;
-        if (m_thread.joinable()) {
-            m_thread.join();
+        if (m_run) {
+            m_device.close();
         }
-        //std::cout << "Thread Stopped." << std::endl;
     }
 
-    bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
-        m_sendMutex.lock();
-        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
-        m_sendMutex.unlock();
-
-        // TODO: Limit the max queue size
-        return true;
+    void Start() override {
+        m_thread = std::thread(&SerialDeviceThread::run, this);
     }
 
-    bool RecieveMessage(std::map<uint32_t, std::shared_ptr<CANMessage>>& recvMap) {
-        // This needs to return all messages with the id, the it will handle which ones pass the mask
-        m_recvMutex.lock();
-        recvMap = m_recvStore;
-        m_recvMutex.unlock();
-
-        return true;
-    }
-
-    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) {
+    void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
         m_streamMutex.lock();
 
-        if (m_device.isOpen()) {
+        if (m_run && m_device.isOpen()) {
             // Create the handle
-            *handle = counter++;
+            *handle = m_counter++;
             
             uint8_t buffer[bufferSize] = {0x00, 0xc0, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
             m_device.write(buffer, bufferSize);
 
-            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
             // Add to the map
-            m_recvStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<CANMessage>{maxSize}});
+            m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
         } else {
             *status = CANStatus::kError;
         }
-        
         m_streamMutex.unlock();
     }
-
-    void CloseStream(uint32_t handle) {
-        m_streamMutex.lock();
-        m_recvStream.erase(handle);
-        m_streamMutex.unlock();
-    }
-
-    // Return a vector of the messages, because pointer can't point to empty vector
-    // Use a circular buffer instead of just the vector
-    void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, uint32_t* messagesRead) {
-        m_streamMutex.lock();
-        *messagesRead = m_recvStream[handle]->messages.GetCount(); // first before remove
-        for (uint32_t i = 0; i < *messagesRead; i++) {
-            CANMessage m;
-            if (m_recvStream[handle]->messages.Remove(m)) {
-                messages[i] = ConvertCANRecieveToHALMessage(m);
-            }
-        }
-        m_streamMutex.unlock();
-        
-    }
-
-    static HAL_CANStreamMessage ConvertCANRecieveToHALMessage(rev::usb::CANMessage msg)
-    {
-        HAL_CANStreamMessage halMsg;
-        halMsg.timeStamp = msg.GetTimestampUs();
-        halMsg.messageID = msg.GetMessageId();
-        halMsg.dataSize = msg.GetSize();
-        memcpy(halMsg.data, msg.GetData(), sizeof(halMsg.data));
-        return halMsg;
-    }
-
 
 
 private:
     serial::Serial m_device;
-    
-    std::atomic_bool m_threadComplete;
-    std::thread m_thread;
-    std::mutex m_sendMutex;
-    std::mutex m_recvMutex;
-    std::mutex m_streamMutex;
-
-    // This is just a random number to start counting for the handles
-    uint32_t counter = 0xa45b5597; // Change to be unique relative to CandleWinUSBDeviceThread
-
-    std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
-    std::map<uint32_t, std::shared_ptr<CANMessage>> m_recvStore;
-    std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_recvStream; // (id, mask), max size, message buffer
-
-    long long m_threadIntervalMs;
 
     static const size_t bufferSize = 12;
 
+    void ReadMessages(bool &reading)  {
+        uint8_t data[bufferSize] = {0}; // 12 bytes of data
+        try {
+            size_t bytesRead = m_device.read(data, bufferSize);
 
-    void run() {
+            if (bytesRead == bufferSize) {
 
-        while (m_threadComplete == false) {
-            auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
-            
-            // 1) Handle all recieved CAN traffic
-            bool reading = true;
-            m_device.flush();
-            while (reading) {
-                uint8_t data[bufferSize] = {0}; // 12 bytes of data
-                try {
-                    size_t bytesRead = m_device.read(data, bufferSize);
+                std::stringstream msgStream;
+                std::stringstream devStream;
+                uint32_t msgId;
+                uint32_t devId;
 
-                    if (bytesRead == bufferSize) {
+                // Gets the full message ID
+                msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                            << std::hex << (int)data[2] << std::setfill('0') << std::setw(2) << std::hex << (int)data[1]
+                            << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];        
+                msgStream >> msgId;
 
-                        std::stringstream msgStream;
-                        std::stringstream devStream;
-                        uint32_t msgId;
-                        uint32_t devId;
+                // Gets just the manufacturer and device type IDs
+                devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                            << std::hex << (int)data[2] << "0000";
+                devStream >> devId;
 
-                        // Gets the full message ID
-                        msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
-                                   << std::hex << (int)data[2] << std::setfill('0') << std::setw(2) << std::hex << (int)data[1]
-                                   << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];        
-                        msgStream >> msgId;
+                // Make sure message ID isn't empty
+                if (msgId != 0x0 ) {
 
-                        // Gets just the manufacturer and device type IDs
-                        devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
-                                   << std::hex << (int)data[2] << "0000";
-                        devStream >> devId;
-
-                        // Make sure message ID isn't empty
-                        if (msgId != 0x0 ) {
-
-                            uint8_t msgData[8];
-                            // Check if parameter access
-                            if (IsLegacyGetParam(msgId)) {
-                                memcpy(msgData, data+6, 6*sizeof(uint8_t));
-                                msgId = devId | ((CMD_API_PARAM_ACCESS | data[4]) << 6) | (msgId & 0x3F);
-                            } else {
-                                memcpy(msgData, data+4, 8*sizeof(uint8_t));
-                            }
-
-
-                            auto msg = std::make_shared<CANMessage>(msgId, msgData, 8);
-                            
-                            m_recvMutex.lock();
-                            if (msg->GetSize() != 0) {
-                                m_recvStore[msgId] = msg;
-                            }
-                            m_recvMutex.unlock();
-
-                            m_streamMutex.lock();
-                            for (auto& stream : m_recvStream) {
-                                // Compare current size of the buffer to the max size of the buffer
-                                if (!stream.second->messages.IsFull()
-                                    && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                                    msg->GetMessageId())) {
-                                    stream.second->messages.Add(*msg);
-                                }
-                            }
-                            m_streamMutex.unlock();
-
-                            reading = false;
-                        }
+                    uint8_t msgData[8];
+                    // Check if parameter access
+                    if (IsLegacyGetParam(msgId)) {
+                        memcpy(msgData, data+6, 6*sizeof(uint8_t));
+                        msgId = devId | ((CMD_API_PARAM_ACCESS | data[4]) << 6) | (msgId & 0x3F);
                     } else {
-                        reading = false;
+                        memcpy(msgData, data+4, 8*sizeof(uint8_t));
                     }
-                } catch(const std::exception& e) {
-                    std::cout << e.what() << std::endl;
-                }
-            }
 
-            // 2) Schedule CANMessage queue
-            m_sendMutex.lock();
-            size_t queueSize = m_sendQueue.size();
+                    auto msg = std::make_shared<CANMessage>(msgId, msgData, 8);
+                    
+                    m_readMutex.lock();
+                    if (msg->GetSize() != 0) {
+                        m_readStore[msgId] = msg;
+                    }
+                    m_readMutex.unlock();
 
-            for (size_t i=0;i<queueSize;i++) {
-                detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                m_sendQueue.pop();
-                if (el.m_intervalMs == -1) {
-                    continue;
-                }
-
-                auto now = std::chrono::steady_clock::now();
-                uint32_t sentMsgId = el.m_msg.GetMessageId();
-                uint16_t apiId = el.m_msg.GetApiId();
-
-                if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
-                    // Little endian
-                    uint8_t idBuffer[4];
-                    uint8_t dataBuffer[8];
-
-                    idBuffer[0] = (sentMsgId & 0x000000ff);
-                    idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
-                    idBuffer[3] = (sentMsgId & 0xff000000) >> 24;
-
-                    // Check to see if it's parameter access
-                    if (IsConfigParameter(apiId)) {
-                        uint32_t paramConfig;
-                        // If the message has empty data, then it's getting parameter value. Otherwise setting parameter value
-                        if (el.m_msg.IsEmpty()) {
-                            paramConfig = GET_CONFIG_PARAM;
-                        } else {
-                            paramConfig = SET_CONFIG_PARAM;
+                    m_streamMutex.lock();
+                    for (auto& stream : m_readStream) {
+                        // Compare current size of the buffer to the max size of the buffer
+                        if (!stream.second->messages.IsFull()
+                            && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                            msg->GetMessageId())) {
+                            stream.second->messages.Add(msg);
                         }
-
-                        // Need to change the id to have the right parameter access value
-                        idBuffer[0] = (paramConfig & 0x000000ff);
-                        idBuffer[1] = (paramConfig & 0x0000ff00) >> 8;
-
-                        // Only 5-6 bytes of data for parameter access, leave first 2 spots free for id and buffer 0
-                        memcpy(dataBuffer + 2, el.m_msg.GetData(), sizeof(uint8_t)*6);
-
-                        // First data byte needs to be the parameter id, second one always needs to be a zero
-                        dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
-                        dataBuffer[1] = 0;
-                    } else { 
-                        // If not parameter access, leave api ID as is 
-                        idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
-                        memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
-                        
                     }
+                    m_streamMutex.unlock();
 
-                    uint8_t buffer[bufferSize];
-                    std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
-
-                    size_t bytesWritten = m_device.write(buffer, bufferSize);
-
-                    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    if (bytesWritten != bufferSize) {
-                        std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
-                    } else {
-                        // std::cout << "Message sent" << std::endl;
-                    }
+                    reading = false;
                 }
-
-                // Return to queue if repeated
-                if (el.m_intervalMs > 0 ) {
-                    el.m_prevTimestamp = now;
-                    m_sendQueue.push(el);
-                }
+            } else {
+                reading = false;
             }
-
-            m_sendMutex.unlock();
-
-            // 3) Stall thread
-            std::this_thread::sleep_until(sleepTime);
+        } catch(const std::exception& e) {
+            std::cout << e.what() << std::endl;
         }
-        //std::cout << "Thread Killed!" << std::endl;
+    }
+
+    void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+        uint32_t sentMsgId = el.m_msg.GetMessageId();
+        uint16_t apiId = el.m_msg.GetApiId();
+
+        if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
+            // Little endian
+            uint8_t idBuffer[4];
+            uint8_t dataBuffer[8];
+
+            idBuffer[0] = (sentMsgId & 0x000000ff);
+            idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
+            idBuffer[3] = (sentMsgId & 0xff000000) >> 24;
+
+            // Check to see if it's parameter access
+            if (IsConfigParameter(apiId)) {
+                uint32_t paramConfig;
+                // If the message has empty data, then it's getting parameter value. Otherwise setting parameter value
+                if (el.m_msg.IsEmpty()) {
+                    paramConfig = GET_CONFIG_PARAM;
+                } else {
+                    paramConfig = SET_CONFIG_PARAM;
+                }
+
+                // Need to change the id to have the right parameter access value
+                idBuffer[0] = (paramConfig & 0x000000ff);
+                idBuffer[1] = (paramConfig & 0x0000ff00) >> 8;
+
+                // Only 5-6 bytes of data for parameter access, leave first 2 spots free for id and buffer 0
+                memcpy(dataBuffer + 2, el.m_msg.GetData(), sizeof(uint8_t)*6);
+
+                // First data byte needs to be the parameter id, second one always needs to be a zero
+                dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
+                dataBuffer[1] = 0;
+            } else { 
+                // If not parameter access, leave api ID as is 
+                idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
+                memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
+                
+            }
+
+            uint8_t buffer[bufferSize];
+            std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
+
+            size_t bytesWritten = m_device.write(buffer, bufferSize);
+
+            // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (bytesWritten != bufferSize) {
+                std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
+            } else {
+                // std::cout << "Message sent" << std::endl;
+            }
+        }
     }
 }; 
 

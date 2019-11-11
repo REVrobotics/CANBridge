@@ -1,7 +1,7 @@
 {
     "fileName": "CANBridge.json",
     "name": "CANBridge",
-    "version": "0.1.3",
+    "version": "0.1.5",
     "uuid": "34b37c7c-8acc-405f-9631-d21f20dc59d8",
     "mavenUrls": [
         "http://www.revrobotics.com/content/sw/max/sdk/maven/"
@@ -11,14 +11,14 @@
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "CANBridge-java",
-            "version": "0.1.3"
+            "version": "0.1.5"
         }
     ],
     "jniDependencies": [
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "CANBridge-jni",
-            "version": "0.1.3",
+            "version": "0.1.5",
             "skipInvalidPlatforms": true,
             "isJar": false,
             "validPlatforms": []
@@ -28,7 +28,7 @@
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "CANBridge-cpp",
-            "version": "0.1.3",
+            "version": "0.1.5",
             "libName": "CANBridge",
             "headerClassifier": "headers",
             "sharedLibrary": true,

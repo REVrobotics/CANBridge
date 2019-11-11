@@ -39,8 +39,8 @@ Serial::SerialImpl::SerialImpl (const string &port, unsigned long baudrate,
     baudrate_ (baudrate), parity_ (parity),
     bytesize_ (bytesize), stopbits_ (stopbits), flowcontrol_ (flowcontrol)
 {
-  if (port_.empty () == false)
-    open ();
+  // if (port_.empty () == false)
+  //   open ();
   read_mutex = CreateMutex(NULL, false, NULL);
   write_mutex = CreateMutex(NULL, false, NULL);
 }
@@ -75,12 +75,16 @@ Serial::SerialImpl::open ()
 
   if (fd_ == INVALID_HANDLE_VALUE) {
     DWORD create_file_err = GetLastError();
-	stringstream ss;
+    stringstream ss;
+    // if (create_file_err) {
+    //   return;
+    // }
     switch (create_file_err) {
     case ERROR_FILE_NOT_FOUND:
       // Use this->getPort to convert to a std::string
       ss << "Specified port, " << this->getPort() << ", does not exist.";
       THROW (IOException, ss.str().c_str());
+      break;
     default:
       ss << "Unknown error opening the serial port: " << create_file_err;
       THROW (IOException, ss.str().c_str());
@@ -337,7 +341,8 @@ Serial::SerialImpl::read (uint8_t *buf, size_t size)
   if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
     stringstream ss;
     ss << "Error while reading from the serial port: " << GetLastError();
-    THROW (IOException, ss.str().c_str());
+    printf(ss.str().c_str());
+    // THROW (IOException, ss.str().c_str());
   }
   return (size_t) (bytes_read);
 }
