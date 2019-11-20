@@ -95,7 +95,6 @@ private:
     
    void ReadMessages(bool &reading) {
        candle_frame_t incomingFrame;
-        incomingFrame.can_id;
     
         reading = candle_frame_read(m_device, &incomingFrame, 0);
 
@@ -121,9 +120,7 @@ private:
 
                 // The queue is for streaming API, implement that here
                 m_readMutex.lock();
-                if (msg->GetSize() != 0) {
-                    m_readStore[incomingFrame.can_id] = msg;
-                }
+                m_readStore[incomingFrame.can_id] = msg;
                 m_readMutex.unlock();
 
                 m_streamMutex.lock();
