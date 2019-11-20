@@ -70,7 +70,7 @@ const int ValidIds[ID_SIZE] = {
 
 bool IsValidSerialMessageId(uint16_t apiId) {
 
-    for (int i = 0; i < ID_SIZE - 1; i++) {
+    for (int i = 0; i < ID_SIZE; i++) {
         if (ValidIds[i] == apiId) {
             return true;
         }
@@ -80,7 +80,7 @@ bool IsValidSerialMessageId(uint16_t apiId) {
 }
 
 bool IsConfigParameter(uint16_t apiId) {
-    if (apiId > CMD_API_PARAM_ACCESS) {
+    if (apiId >= CMD_API_PARAM_ACCESS) {
         return true;
     }
 

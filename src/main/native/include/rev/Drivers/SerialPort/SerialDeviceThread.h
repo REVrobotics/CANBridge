@@ -103,6 +103,7 @@ public:
             // Create the handle
             *handle = m_counter++;
    
+            // use drv status for serial port to identify
             uint32_t msgId = 0x2051A80;
             uint8_t dataBuffer[8] = {0};
 
@@ -191,7 +192,8 @@ private:
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
 
-        if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
+
+        if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && IsValidSerialMessageId(apiId)) {
             // Little endian
             uint8_t idBuffer[4];
             uint8_t dataBuffer[8];
@@ -220,6 +222,7 @@ private:
                 // First data byte needs to be the parameter id, second one always needs to be a zero
                 dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
                 dataBuffer[1] = 0;
+
             } else { 
                 // If not parameter access, leave api ID as is 
                 idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;

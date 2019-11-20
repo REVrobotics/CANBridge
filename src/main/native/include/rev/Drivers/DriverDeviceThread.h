@@ -51,7 +51,11 @@ namespace usb {
 
 class DriverDeviceThread {
 public:
-
+    /**
+     * @param counter is a unique 32-bit unsigned integar that the thread will use and 
+     * increment on to make handles for streams that are opens
+     * @param threadIntervalMs is the update rate of the thread 
+     */
     DriverDeviceThread(uint32_t counter, long long threadIntervalMs) :
         m_threadComplete(false),
         m_threadIntervalMs(threadIntervalMs),
@@ -60,7 +64,7 @@ public:
 
     virtual void Start() = 0;
 
-void Stop() {
+    void Stop() {
         m_threadComplete = true;
         if (m_thread.joinable()) {
             m_thread.join();
@@ -124,6 +128,10 @@ void Stop() {
         details = &m_statusDetails;
     }
 
+    // void GetThreadStatus(char* status) {
+    //     return m_threadStatus.c_str();
+    // }
+
 
 protected:
     std::atomic_bool m_threadComplete;
@@ -136,6 +144,7 @@ protected:
     uint32_t m_counter;
 
     CANStatusDetails m_statusDetails;
+    // std::string m_threadStatus("kOK");
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, std::shared_ptr<CANMessage>> m_readStore;
