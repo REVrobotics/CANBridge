@@ -32,6 +32,7 @@
 #define _CANBRIDGEUTILS_H_
 
 #include <string>
+#include <memory>
 
 #include "rev/CANBridge.h"
 #include "rev/CANMessage.h"

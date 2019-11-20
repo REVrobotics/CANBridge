@@ -69,7 +69,7 @@ void Stop() {
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         m_writeMutex.lock();
-        std::cout << "enqueue >> " << msg.GetMessageId() << std::endl;
+        // std::cout << "enqueue >> " << msg.GetMessageId() << std::endl;
         m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
         m_writeMutex.unlock();
 
@@ -172,7 +172,6 @@ protected:
                 }
 
                 auto now = std::chrono::steady_clock::now();
-
                 WriteMessages(el, now);
 
                 // Return to queue if repeated

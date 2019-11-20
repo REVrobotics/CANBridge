@@ -103,14 +103,21 @@ public:
             // Create the handle
             *handle = m_counter++;
             
-            uint8_t buffer[bufferSize] = {0x80, 0xa1, 0x05, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-            std::cout << "stream write >> ";
-            for (int i = 0; i < bufferSize; i++ ) {
-                std::cout << std::hex << (int)buffer[i];
-            }
-            std::cout << "\n";
-            m_device.write(buffer, bufferSize);
+            // uint8_t buffer[bufferSize] = {0x02, 0x05, 0x1a, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+            // std::cout << "stream write >> ";
+            // for (int i = 0; i < bufferSize; i++ ) {
+            //     std::cout << std::hex << (int)buffer[i];
+            // }
+            // std::cout << "\n";
+            // m_device.write(buffer, bufferSize);
 
+            uint32_t msgId = 0x2051A80;
+            uint8_t dataBuffer[8] = {0};
+
+            auto now = std::chrono::steady_clock::now();
+
+            WriteMessages(rev::usb::detail::CANThreadSendQueueElement(rev::usb::CANMessage(msgId, dataBuffer, 0, 0), 0), now);
+            
             // Add to the map
             m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
         } else {
@@ -150,7 +157,7 @@ private:
 
                 // Make sure message ID isn't empty
                 if (msgId != 0x0 ) {
-                    std::cout << "read >> " << std::hex << msgId << "  " << devId << std::endl;
+                    // std::cout << "read >> " << std::hex << msgId << "  " << devId << std::endl;
                     uint8_t msgData[8];
                     // Check if parameter access
                     if (IsLegacyGetParam(msgId)) {
@@ -192,7 +199,7 @@ private:
     void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
-        std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
+        // std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
 
         if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
             // Little endian
@@ -231,11 +238,11 @@ private:
 
             uint8_t buffer[bufferSize];
             std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
-            std::cout << "write >> ";
-            for (int i = 0; i < bufferSize; i++ ) {
-                std::cout << std::hex << (int)buffer[i];
-            }
-            std::cout << "\n";
+            // std::cout << "write >> ";
+            // for (int i = 0; i < bufferSize; i++ ) {
+            //     std::cout << std::hex << (int)buffer[i];
+            // }
+            // std::cout << "\n";
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 
