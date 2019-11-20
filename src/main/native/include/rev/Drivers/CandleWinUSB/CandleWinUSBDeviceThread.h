@@ -99,7 +99,7 @@ private:
     
         reading = candle_frame_read(m_device, &incomingFrame, 0);
 
-        // Recieved a new frame, store it
+        // Received a new frame, store it
         if (reading) {
             auto msg = std::make_shared<CANMessage>(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
             candle_frametype_t frameType = candle_frame_type(&incomingFrame);

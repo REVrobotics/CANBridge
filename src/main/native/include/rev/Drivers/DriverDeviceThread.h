@@ -69,6 +69,7 @@ void Stop() {
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         m_writeMutex.lock();
+        std::cout << "enqueue >> " << msg.GetMessageId() << std::endl;
         m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
         m_writeMutex.unlock();
 
@@ -153,7 +154,7 @@ protected:
         while (m_threadComplete == false && m_run) {
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 
-            // 1) Handle all recieved CAN traffic
+            // 1) Handle all received CAN traffic
             bool reading = true;
             while (reading) {
                 ReadMessages(reading);

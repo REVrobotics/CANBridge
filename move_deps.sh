@@ -1,6 +1,6 @@
 #! /bin/bash
 
-RELEASE_DIR=~/releases/maven/release/com/revrobotics/usb
+RELEASE_DIR=~/Documents/GitHub/CANBridge/build/repos/releases/com/revrobotics/usb
 MOVE_DIR=C:/Users/Public/frc2019/maven/com/revrobotics/usb
 VENDOR_DIR=C:/Users/Public/frc2019/vendordeps
 

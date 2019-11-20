@@ -59,7 +59,7 @@ TEST(CANMessageTest, SendAndReceive) {
         // rev::usb::CANMessage msg;
         // uint32_t messageID = 33891849;
         // uint32_t messageMask = 0;
-        // device->RecieveCANMessage(msg, messageID, messageMask);
+        // device->ReceiveCANMessage(msg, messageID, messageMask);
     }
 
     EXPECT_EQ(numDevices, 1);

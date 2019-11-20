@@ -137,12 +137,12 @@ void CANBridge_SendMessageCallback(const char* name, void* param,
     }
 }
 
-struct CANBridge_CANRecieve {
+struct CANBridge_CANReceive {
     std::shared_ptr<rev::usb::CANMessage> m_message;
     int32_t status;
 };
 
-static bool CANRecieveCompare(struct CANBridge_CANRecieve a, struct CANBridge_CANRecieve b)
+static bool CANReceiveCompare(struct CANBridge_CANReceive a, struct CANBridge_CANReceive b)
 {   
     return rev::usb::CANMessageCompare(*a.m_message, *b.m_message);
 } 
@@ -151,20 +151,20 @@ void CANBridge_ReceiveMessageCallback(
     const char* name, void* param, uint32_t* messageID, uint32_t messageIDMask,
     uint8_t* data, uint8_t* dataSize, uint32_t* timeStamp, int32_t* status)
 {
-    std::vector<struct CANBridge_CANRecieve> recieves;
+    std::vector<struct CANBridge_CANReceive> receives;
 
-    // 1) Recieve on all registered channels
+    // 1) Receive on all registered channels
     for (auto& dev : CANDeviceList) {
-        struct CANBridge_CANRecieve msg;
+        struct CANBridge_CANReceive msg;
         auto stat = dev.first->ReceiveCANMessage(msg.m_message, *messageID, messageIDMask);
 
         if (stat == rev::usb::CANStatus::kOk && rev::usb::CANBridge_ProcessMask(dev.second, msg.m_message->GetMessageId())) {
             msg.status = CANBridge_StatusToHALError(stat);
-            recieves.push_back(msg);
+            receives.push_back(msg);
         }
     }
 
-    if (recieves.size() == 0) {
+    if (receives.size() == 0) {
         // TODO: what is the correct error return here
         *status = HAL_ERR_CANSessionMux_MessageNotFound;
         return;
@@ -173,9 +173,9 @@ void CANBridge_ReceiveMessageCallback(
 
 
     // 2) Return the newest message that does not have an error
-    std::sort(recieves.begin(), recieves.end(), CANRecieveCompare);
+    std::sort(receives.begin(), receives.end(), CANReceiveCompare);
 
-    for (auto& recv : recieves) {
+    for (auto& recv : receives) {
         if (recv.status == 0 && recv.m_message->isNew()) {
             *timeStamp = recv.m_message->GetTimestampUs();
             *status = recv.status;
