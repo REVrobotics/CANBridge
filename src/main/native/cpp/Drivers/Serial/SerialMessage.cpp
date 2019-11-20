@@ -46,7 +46,7 @@ const int CMD_API_SWDL_DATA = 0x09C;
 const int CMD_API_SWDL_CHKSUM = 0x09D;
 const int CMD_API_SWDL_RETRANSMIT = 0x09E;
 
-const int ID_SIZE = 12;
+const int ID_SIZE = 13;
 
 
 
@@ -64,6 +64,9 @@ const int ValidIds[ID_SIZE] = {
     CMD_API_SWDL_DATA,
     CMD_API_SWDL_CHKSUM,
     CMD_API_SWDL_RETRANSMIT,
+
+    // Reset into DFU Mode command
+    0x010,
 
     CMD_API_PARAM_ACCESS
 };

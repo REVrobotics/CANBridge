@@ -191,12 +191,20 @@ private:
     void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
+        
+        if (el.m_msg.GetDeviceType() == CANDeviceType::gearToothSensor) {
+            //Special message by motor controller to reboot into DFU
+            sentMsgId |= (1 << 29);           
+        }
+        // std::cout << "serial write >> " << std::hex << sentMsgId << " Is API ID: " << std::hex << apiId << " Valid? " << (IsValidSerialMessageId(apiId) ? "Yes" : "No") << std::endl;
 
 
         if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && IsValidSerialMessageId(apiId)) {
             // Little endian
             uint8_t idBuffer[4];
             uint8_t dataBuffer[8];
+            
+            //std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
 
             idBuffer[0] = (sentMsgId & 0x000000ff);
             idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
