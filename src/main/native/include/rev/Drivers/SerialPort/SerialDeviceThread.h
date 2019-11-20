@@ -199,12 +199,19 @@ private:
     void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
-        // std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
+        
+        if (el.m_msg.GetDeviceType() == CANDeviceType::gearToothSensor) {
+            //Special message by motor controller to reboot into DFU
+            sentMsgId |= (1 << 29);           
+        }
+        // std::cout << "serial write >> " << std::hex << sentMsgId << " Is API ID: " << std::hex << apiId << " Valid? " << (IsValidSerialMessageId(apiId) ? "Yes" : "No") << std::endl;
 
         if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
             // Little endian
             uint8_t idBuffer[4];
             uint8_t dataBuffer[8];
+            
+            //std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
 
             idBuffer[0] = (sentMsgId & 0x000000ff);
             idBuffer[2] = (sentMsgId & 0x00ff0000) >> 16;
@@ -230,6 +237,8 @@ private:
                 // First data byte needs to be the parameter id, second one always needs to be a zero
                 dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
                 dataBuffer[1] = 0;
+
+                //std::cout << "\tIsConfigParameter()" << std::endl;
             } else { 
                 // If not parameter access, leave api ID as is 
                 idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
@@ -243,6 +252,7 @@ private:
             //     std::cout << std::hex << (int)buffer[i];
             // }
             // std::cout << "\n";
+            //std::cout << "raw >> " << std::hex << *(uint64_t*)buffer << std::endl;
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 

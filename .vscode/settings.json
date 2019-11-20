@@ -61,7 +61,12 @@
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
         "xlocmon": "cpp",
-        "xloctime": "cpp"
+        "xloctime": "cpp",
+        "cstdarg": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "iterator": "cpp",
+        "sstream": "cpp"
     },
     "C_Cpp.default.configurationProvider": "vscode-wpilib"
 }
