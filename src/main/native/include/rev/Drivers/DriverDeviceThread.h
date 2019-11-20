@@ -69,7 +69,6 @@ void Stop() {
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         m_writeMutex.lock();
-        // std::cout << "enqueue >> " << msg.GetMessageId() << std::endl;
         m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
         m_writeMutex.unlock();
 
