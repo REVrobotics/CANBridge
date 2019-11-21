@@ -185,7 +185,9 @@ private:
             }
         } catch(const std::exception& e) {
             std::cout << e.what() << std::endl;
-        }
+            m_threadStatus = CANStatus::kDeviceWriteError;
+            m_statusErrCount++;
+       }
     }
 
     void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
@@ -244,8 +246,11 @@ private:
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (bytesWritten != bufferSize) {
-                std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
+                // std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
+                m_threadStatus = CANStatus::kDeviceWriteError;
+                m_statusErrCount++;
             } else {
+                m_threadStatus = CANStatus::kOk;
                 // std::cout << "Message sent" << std::endl;
             }
         }

@@ -88,6 +88,8 @@ const char* CANBridge_GetDeviceName(c_CANBridge_ScanHandle handle, size_t index)
  */
 const char* CANBridge_GetDriverName(c_CANBridge_ScanHandle handle, size_t index);
 
+int CANBridge_GetNumberOfErrors();
+
 /**
  * Free the memory allocated by CANBridge_Scan()
  * 

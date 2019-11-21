@@ -128,9 +128,17 @@ public:
         details = &m_statusDetails;
     }
 
-    // void GetThreadStatus(char* status) {
-    //     return m_threadStatus.c_str();
-    // }
+    CANStatus GetLastThreadError() {
+        CANStatus last = m_threadStatus;
+        m_threadStatus = CANStatus::kOk;
+        return last;
+    }
+
+    int GetNumberOfErrors() {
+        int lastCnt = m_statusErrCount;
+        m_statusErrCount = 0;
+        return lastCnt;
+    }
 
 
 protected:
@@ -144,7 +152,8 @@ protected:
     uint32_t m_counter;
 
     CANStatusDetails m_statusDetails;
-    // std::string m_threadStatus("kOK");
+    int m_statusErrCount = 0;
+    CANStatus m_threadStatus = CANStatus::kOk;
 
     std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, std::shared_ptr<CANMessage>> m_readStore;
@@ -160,6 +169,7 @@ protected:
 
     void run() {
         while (m_threadComplete == false && m_run) {
+            m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 
             // 1) Handle all received CAN traffic

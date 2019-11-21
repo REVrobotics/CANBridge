@@ -117,6 +117,16 @@ const char* CANBridge_GetDriverName(c_CANBridge_ScanHandle handle, size_t index)
     return handle->devices[index].driverName.c_str();
 }
 
+int CANBridge_GetNumberOfErrors() 
+{
+    int err = 0;
+    for (auto& dev : CANDeviceList) {
+        err += dev.first->GetNumberOfErrors();
+    }
+
+    return err;
+}
+
 void CANBridge_FreeScan(c_CANBridge_ScanHandle handle)
 {
     delete handle;
@@ -229,7 +239,7 @@ void CANBridge_ReadStreamSessionCallback(
      * multiple devices opening multiple streams.
      */
     for (auto& dev : CANDeviceList) {
-        auto stat = dev.first->ReadStreamSession(sessionHandle, messages, messagesToRead, messagesRead, status);
+        auto stat = dev.first->ReadStreamSession(sessionHandle, messages, messagesToRead, messagesRead);
         *status = (int32_t)stat;
     }
 }
@@ -239,10 +249,11 @@ void CANBridge_GetCANStatusCallback(
     uint32_t* busOffCount, uint32_t* txFullCount, uint32_t* receiveErrorCount,
     uint32_t* transmitErrorCount, int32_t* status)
 {
-    
+    for (auto& dev : CANDeviceList) {
+        auto stat = dev.first->GetCANDetailStatus(percentBusUtilization, busOffCount, txFullCount, receiveErrorCount, transmitErrorCount);
+        *status = (int32_t)stat;
+    }
 }
-
-
 
 static std::vector<int32_t> LocalCallbackStore;
 

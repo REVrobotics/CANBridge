@@ -47,6 +47,7 @@ public:
 
     virtual std::string GetName() const = 0;
     virtual std::string GetDescriptor() const {return std::string();}
+    virtual int GetNumberOfErrors() = 0;
 
     virtual int GetId() const = 0;
 
@@ -54,9 +55,9 @@ public:
     virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) = 0;
     virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) = 0;
     virtual CANStatus CloseStreamSession(uint32_t sessionHandle) = 0;
-    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status) = 0;
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) = 0;
 
-    virtual CANStatus GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status) = 0;
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) = 0;
 
     virtual bool IsConnected() = 0;
 };

@@ -34,7 +34,7 @@ namespace usb {
 enum class CANStatus {
     kOk = 0,
     kError = 1,
-    kDeviceWriteError = 2,
+    kDeviceWriteError = 4, // Matched with c_SparkMax_ErrorHAL
     kTimeout = -1154 // to match WPILib HAL
 };
 

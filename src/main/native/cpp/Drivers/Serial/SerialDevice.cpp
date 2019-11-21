@@ -74,11 +74,16 @@ int SerialDevice::GetId() const
     return 0;
 }
 
+int SerialDevice::GetNumberOfErrors() 
+{
+    return m_thread.GetNumberOfErrors();
+}
+
 CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
     if (m_properlyOpened) {
         m_thread.EnqueueMessage(msg, periodMs);
-        return CANStatus::kOk;
+        return m_thread.GetLastThreadError();
     } else {
         return CANStatus::kError;
     }
@@ -102,6 +107,7 @@ CANStatus SerialDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint
 
     if (status == CANStatus::kOk) {
         msg = mostRecent;
+        status = m_thread.GetLastThreadError();
     } else {
         status = CANStatus::kError;
     }
@@ -118,31 +124,38 @@ CANStatus SerialDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CAN
     } else {
         stat = CANStatus::kError;
     }
-    return stat;
+    return m_thread.GetLastThreadError();
 }
 CANStatus SerialDevice::CloseStreamSession(uint32_t sessionHandle)
 {
     if (m_properlyOpened) {
         m_thread.CloseStream(sessionHandle);
-        return CANStatus::kOk;
+        return m_thread.GetLastThreadError();
     } else {
         return CANStatus::kError;
     }
 }
-CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead, int32_t* status)
+CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead)
 {
     if (m_properlyOpened) {
         m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-        status = static_cast<int32_t>(CANStatus::kOk);    
-        return CANStatus::kOk;
+        return m_thread.GetLastThreadError();
     } else {
         return CANStatus::kError;
     }
 }
 
-CANStatus SerialDevice::GetCANStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, int32_t* status)
+CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr)
 {
-    return CANStatus::kOk;
+    rev::usb::CANStatusDetails details;
+    m_thread.GetCANStatus(&details);
+    *busOff = details.busOffCount;
+    *txFull = details.txFullCount;
+    *receiveErr = details.receiveErrCount;
+    *transmitErr = details.transmitErrCount;
+    *percentBusUtilization = 0.0; // todo how to get this properly
+    
+    return m_thread.GetLastThreadError();
 }
 
 bool SerialDevice::IsConnected()

@@ -134,7 +134,9 @@ private:
                 }
                 m_streamMutex.unlock();
             }
-        }
+
+            m_threadStatus = CANStatus::kOk;
+        } 
    }
 
    void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
@@ -147,7 +149,12 @@ private:
 
             // TODO: Feed back an error
             if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                std::cout << "Failed to send message: " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                m_threadStatus = CANStatus::kDeviceWriteError;
+                m_statusErrCount++;
+            } else {
+                m_threadStatus = CANStatus::kOk;
+
             }
         }
    }
