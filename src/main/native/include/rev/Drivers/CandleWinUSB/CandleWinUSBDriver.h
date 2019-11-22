@@ -41,7 +41,7 @@ public:
     CandleWinUSBDriver() {}
     virtual ~CandleWinUSBDriver() override {}
 
-    virtual std::string GetName() const {return "Candle WINUSB";}
+    virtual std::string GetName() const {return "USB-CAN Bridge";}
 
     virtual std::vector<CANDeviceDetail> GetDevices() override;
     virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor) override;
