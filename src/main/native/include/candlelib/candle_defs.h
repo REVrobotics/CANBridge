@@ -92,9 +92,11 @@ typedef struct {
     candle_device_config_t dconf;
     candle_capability_t bt_const;
 
+#ifdef USING_OVERLAPPED_IO_ON_TX
 	candle_tx_rx_urb txurbs[CANDLE_URB_COUNT];
 	HANDLE txevents[CANDLE_URB_COUNT];
 	uint32_t txurbs_in_use;
+#endif
 
 	candle_tx_rx_urb rxurbs[CANDLE_URB_COUNT];
 	HANDLE rxevents[CANDLE_URB_COUNT];

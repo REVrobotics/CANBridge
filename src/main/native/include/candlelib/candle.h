@@ -27,6 +27,9 @@
 #include <windows.h>
 #endif
 
+// Use overlapped IO on TX as well as RX
+// #define USING_OVERLAPPED_IO_ON_TX
+
 #ifdef __cplusplus
 extern "C" {
 #endif
