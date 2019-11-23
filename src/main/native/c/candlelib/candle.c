@@ -258,9 +258,11 @@ static bool candle_dev_internal_open(candle_handle hdev)
 {
     candle_device_t *dev = (candle_device_t*)hdev;
 
+#ifdef USING_OVERLAPPED_IO_ON_TX
 	memset(dev->txevents, 0, sizeof(dev->txevents));
 	memset(dev->txurbs, 0, sizeof(dev->txurbs));
 	dev->txurbs_in_use = 0;
+#endif
 
 	memset(dev->rxevents, 0, sizeof(dev->rxevents));
 	memset(dev->rxurbs, 0, sizeof(dev->rxurbs));
@@ -409,10 +411,12 @@ static void close_urb(candle_device_t *dev,candle_tx_rx_urb *urb)
 static bool candle_close_tx_rx_urbs(candle_device_t *dev)
 {
 	for (unsigned i = 0; i<CANDLE_URB_COUNT; i++) {
+#ifdef USING_OVERLAPPED_IO_ON_TX
 		if (dev->txevents[i] != NULL) {
 			close_urb(dev, &dev->txurbs[i]);
 			CloseHandle(dev->txevents[i]);
 		}
+#endif
 		if (dev->rxevents[i] != NULL) {
 			close_urb(dev, &dev->rxurbs[i]);
 			CloseHandle(dev->rxevents[i]);
@@ -421,17 +425,18 @@ static bool candle_close_tx_rx_urbs(candle_device_t *dev)
     return true;
 }
 
-
 DLL bool __stdcall candle_dev_open(candle_handle hdev)
 {
     candle_device_t *dev = (candle_device_t*)hdev;
 
     if (candle_dev_internal_open(dev)) {
+#ifdef USING_OVERLAPPED_IO_ON_TX
 		for (unsigned i = 0; i<CANDLE_URB_COUNT; i++) {
 			HANDLE ev = CreateEvent(NULL, true, false, NULL);
 			dev->txevents[i] = ev;
 			dev->txurbs[i].ovl.hEvent = ev;
 		}
+#endif
 		for (unsigned i = 0; i<CANDLE_URB_COUNT; i++) {
 			HANDLE ev = CreateEvent(NULL, true, false, NULL);
 			dev->rxevents[i] = ev;
@@ -608,6 +613,8 @@ DLL bool __stdcall candle_channel_stop(candle_handle hdev, uint8_t ch)
     return candle_ctrl_set_device_mode(dev, ch, CANDLE_DEVMODE_RESET, 0);
 }
 
+
+#ifdef USING_OVERLAPPED_IO_ON_TX
 static bool check_write_result(candle_device_t *dev, uint32_t urb_num)
 {
 	bool rc;
@@ -730,6 +737,35 @@ DLL bool __stdcall candle_frame_send(candle_handle hdev, uint8_t ch, candle_fram
 
     return rc;
 }
+#else
+
+DLL bool __stdcall candle_frame_send(candle_handle hdev, uint8_t ch, candle_frame_t *frame, bool wait_send, uint32_t timeout_ms)
+{
+	(void)wait_send;
+	(void)timeout_ms;
+    // TODO ensure device is open, check channel count..
+    candle_device_t *dev = (candle_device_t*)hdev;
+
+    unsigned long bytes_sent = 0;
+
+    frame->echo_id = 0;
+    frame->channel = ch;
+
+    bool rc = WinUsb_WritePipe(
+        dev->winUSBHandle,
+        dev->bulkOutPipe,
+        (uint8_t*)frame,
+        sizeof(*frame),
+        &bytes_sent,
+        0
+    );
+
+    dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_SEND_FRAME;
+    return rc;
+
+}
+
+#endif
 
 DLL bool __stdcall candle_frame_read(candle_handle hdev, candle_frame_t *frame, uint32_t timeout_ms)
 {
