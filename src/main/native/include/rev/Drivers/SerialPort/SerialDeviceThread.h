@@ -58,7 +58,7 @@ namespace rev {
 namespace usb {
 
 
-class SerialDeviceThread : public DriverDeviceThread { 
+class SerialDeviceThread : public DriverDeviceThread {
 public:
     SerialDeviceThread() =delete;
     SerialDeviceThread(std::string port, long long threadIntervalMs = 1) : DriverDeviceThread(0xa45b5597, threadIntervalMs)
@@ -80,10 +80,10 @@ public:
                 std::cout << port << " already open" << std::endl;
             }
         } catch(const std::exception& e) {
-            e.what();
+            (void)e.what();
             m_run = false;
         }
-   
+
     }
     ~SerialDeviceThread()
     {
@@ -102,7 +102,7 @@ public:
         if (m_run && m_device.isOpen()) {
             // Create the handle
             *handle = m_counter++;
-   
+
             // use drv status for serial port to identify
             uint32_t msgId = 0x2051A80;
             uint8_t dataBuffer[8] = {0};
@@ -110,7 +110,7 @@ public:
             auto now = std::chrono::steady_clock::now();
 
             WriteMessages(rev::usb::detail::CANThreadSendQueueElement(rev::usb::CANMessage(msgId, dataBuffer, 0, 0), 0), now);
-            
+
             // Add to the map
             m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
         } else {
@@ -138,13 +138,13 @@ private:
                 uint32_t devId;
 
                 // Gets the full message ID
-                msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                msgStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2)
                             << std::hex << (int)data[2] << std::setfill('0') << std::setw(2) << std::hex << (int)data[1]
-                            << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];        
+                            << std::setfill('0') << std::setw(2) << std::hex << (int)data[0];
                 msgStream >> msgId;
 
                 // Gets just the manufacturer and device type IDs
-                devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2) 
+                devStream << "0x" << std::setfill('0') << std::setw(2) << std::hex << (int)data[3] << std::setfill('0') << std::setw(2)
                             << std::hex << (int)data[2] << "0000";
                 devStream >> devId;
 
@@ -160,7 +160,7 @@ private:
                     }
 
                     auto msg = std::make_shared<CANMessage>(msgId, msgData, 8);
-                    
+
                     m_readMutex.lock();
                     if (msg->GetSize() != 0) {
                         m_readStore[msgId] = msg;
@@ -193,10 +193,10 @@ private:
     void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
-        
+
         if (el.m_msg.GetDeviceType() == CANDeviceType::gearToothSensor) {
             //Special message by motor controller to reboot into DFU
-            sentMsgId |= (1 << 29);           
+            sentMsgId |= (1 << 29);
         }
         // std::cout << "serial write >> " << std::hex << sentMsgId << " Is API ID: " << std::hex << apiId << " Valid? " << (IsValidSerialMessageId(apiId) ? "Yes" : "No") << std::endl;
 
@@ -205,7 +205,7 @@ private:
             // Little endian
             uint8_t idBuffer[4];
             uint8_t dataBuffer[8];
-            
+
             //std::cout << "serial write >> " << std::hex << sentMsgId << std::endl;
 
             idBuffer[0] = (sentMsgId & 0x000000ff);
@@ -233,10 +233,10 @@ private:
                 dataBuffer[0] = CMD_API_PARAM_ACCESS | apiId; // needs to be the paramter id
                 dataBuffer[1] = 0;
 
-            } else { 
-                // If not parameter access, leave api ID as is 
+            } else {
+                // If not parameter access, leave api ID as is
                 idBuffer[1] = (sentMsgId & 0x0000ff00) >> 8;
-                memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);   
+                memcpy(dataBuffer, el.m_msg.GetData(), sizeof(uint8_t)*8);
             }
 
             uint8_t buffer[bufferSize];
@@ -255,7 +255,7 @@ private:
             }
         }
     }
-}; 
+};
 
 } // namespace usb
 } // namespace rev

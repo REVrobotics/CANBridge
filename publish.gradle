@@ -47,8 +47,8 @@ def zipBaseName = "_GROUP_com_revrobotics_usb_ID_${baseArtifactId}-cpp_CLS"
 def javaBaseName = "_GROUP_com_revrobotics_usb_ID_${baseArtifactId}-java_CLS"
 
 task cppHeadersZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = zipBaseName
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
     classifier = "headers"
 
     from(licenseFile) {
@@ -61,8 +61,8 @@ task cppHeadersZip(type: Zip) {
 }
 
 task cppSourceZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = zipBaseName
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
     classifier = "source"
 
     from(licenseFile) {
@@ -74,31 +74,10 @@ task cppSourceZip(type: Zip) {
     }
 }
 
-/*
-task cppDriverHeadersZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = driverZipBaseName
-    classifier = "headers"
-
-    from(licenseFile) {
-        into '/'
-    }
-
-    from('src/main/driver/include') {
-        into '/'
-    }
-}
-*/
-
 build.dependsOn cppHeadersZip
 addTaskToCopyAllOutputs(cppHeadersZip)
 build.dependsOn cppSourceZip
 addTaskToCopyAllOutputs(cppSourceZip)
-
-/*
-build.dependsOn cppDriverHeadersZip
-addTaskToCopyAllOutputs(cppDriverHeadersZip)
-*/
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
@@ -111,21 +90,21 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 task outputJar(type: Jar, dependsOn: classes) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     from sourceSets.main.output
 }
 
 task outputSourcesJar(type: Jar, dependsOn: classes) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     classifier = 'sources'
     from sourceSets.main.allSource
 }
 
 task outputJavadocJar(type: Jar, dependsOn: javadoc) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     classifier = 'javadoc'
     from javadoc.destinationDir
 }
@@ -168,26 +147,11 @@ tasks.matching {it != cleanReleaseRepo}.all {it.dependsOn cleanReleaseRepo}
 model {
     publishing {
         def revTaskList = createComponentZipTasks($.components, ['CANBridge'], zipBaseName, Zip, project, includeStandardZipFormat)
-        def revAllTaskList
-        if (!project.hasProperty('jenkinsBuild')) {
-            revAllTaskList = createAllCombined(revTaskList, ['CANBridge'], zipBaseName, Zip, project)
-        }
-
-        /*
-        def revDriverTaskList = createComponentZipTasks($.components, ['candlelib'], driverZipBaseName, Zip, project, includeStandardZipFormat)
-        def revDriverAllTaskList
-        if (!project.hasProperty('jenkinsBuild')) {
-            revDriverAllTaskList = createAllCombined(revDriverTaskList, ['candlelib'], driverZipBaseName, Zip, project)
-        }
-        */
 
         publications {
             cpp(MavenPublication) {
                 revTaskList.each {
                     artifact it
-                }
-                if (!project.hasProperty('jenkinsBuild')) {
-                    artifact revAllTaskList
                 }
                 artifact cppHeadersZip
                 artifact cppSourceZip
@@ -196,21 +160,6 @@ model {
                 groupId artifactGroupId
                 version pubVersion
             }
-            /*
-            driver(MavenPublication) {
-                revDriverTaskList.each {
-                    artifact it
-                }
-                if (!project.hasProperty('jenkinsBuild')) {
-                    artifact revDriverAllTaskList
-                }
-                artifact cppDriverHeadersZip
-
-                artifactId = "${baseArtifactId}-driver"
-                groupId artifactGroupId
-                version pubVersion
-            }
-            */
 
             java(MavenPublication) {
                 artifact jar
