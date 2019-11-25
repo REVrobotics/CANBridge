@@ -73,9 +73,8 @@ public:
     }
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
-        m_writeMutex.lock();
+        std::lock_guard<std::mutex> lock(m_writeMutex);
         m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
-        m_writeMutex.unlock();
 
         // TODO: Limit the max queue size
         return true;
@@ -83,24 +82,21 @@ public:
 
     bool ReceiveMessage(std::map<uint32_t, std::shared_ptr<CANMessage>>& readMap) {
         // This needs to return all messages with the id, the it will handle which ones pass the mask
-        m_readMutex.lock();
+        std::lock_guard<std::mutex> lock(m_readMutex);
         readMap = m_readStore;
-        m_readMutex.unlock();
-
         return true;
     }
 
     virtual void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus* status) = 0;
 
     void CloseStream(uint32_t handle) {
-        m_streamMutex.lock();
+        std::lock_guard<std::mutex> lock(m_streamMutex);
         m_readStream.erase(handle);
-        m_streamMutex.unlock();
     }
 
     void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, 
                     uint32_t* messagesRead) {
-        m_streamMutex.lock();
+        std::lock_guard<std::mutex> lock(m_streamMutex);
         *messagesRead = m_readStream[handle]->messages.GetCount(); // first before remove
         for (uint32_t i = 0; i < *messagesRead; i++) {
             std::shared_ptr<CANMessage> m;
@@ -108,7 +104,6 @@ public:
                 messages[i] = ConvertCANToHALMessage(m);
             }
         }
-        m_streamMutex.unlock();
     }
 
     HAL_CANStreamMessage ConvertCANToHALMessage(std::shared_ptr<CANMessage> msg) {
@@ -180,36 +175,37 @@ protected:
             }
 
             // 2) Schedule CANMessage queue
-            m_writeMutex.lock();
-            size_t queueSize = m_sendQueue.size();
+            {
+                std::lock_guard<std::mutex> lock(m_writeMutex);
+                size_t queueSize = m_sendQueue.size();
 
-            for (size_t i=0;i<queueSize;i++) {
-                detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                if (el.m_intervalMs == -1) {
-                    m_sendQueue.pop();
-                    continue;
-                }
-
-                auto now = std::chrono::steady_clock::now();
-
-                // Don't pop queue if send fails
-                if (WriteMessages(el, now)) {
-                    m_sendQueue.pop();
-
-                    // Return to end of queue if repeated
-                    if (el.m_intervalMs > 0 ) {
-                        el.m_prevTimestamp = now;
-                        m_sendQueue.push(el);
+                for (size_t i=0;i<queueSize;i++) {
+                    detail::CANThreadSendQueueElement el = m_sendQueue.front();
+                    if (el.m_intervalMs == -1) {
+                        m_sendQueue.pop();
+                        continue;
                     }
-                } else {
-                    // Wait a little bit before trying again
-                    std::cout << "WriteMessages() failed, re-trying..." << std::endl;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+                    auto now = std::chrono::steady_clock::now();
+
+                    // Don't pop queue if send fails
+                    if (WriteMessages(el, now)) {
+                        m_sendQueue.pop();
+
+                        // Return to end of queue if repeated
+                        if (el.m_intervalMs > 0 ) {
+                            el.m_prevTimestamp = now;
+                            m_sendQueue.push(el);
+                        }
+                    } else {
+                        // Wait a little bit before trying again
+                        std::cout << "WriteMessages() failed, re-trying..." << std::endl;
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+
                 }
 
             }
-
-            m_writeMutex.unlock();
 
             // 3) Stall thread
             std::this_thread::sleep_until(sleepTime);
