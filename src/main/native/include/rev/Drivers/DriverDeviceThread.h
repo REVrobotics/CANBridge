@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <map>
 #include <queue>
+#include <memory>
 
 #include <iostream>
 
@@ -66,8 +67,8 @@ public:
 
     void Stop() {
         m_threadComplete = true;
-        if (m_thread.joinable()) {
-            m_thread.join();
+        if (m_thread->joinable()) {
+            m_thread->join();
         }
     }
 
@@ -144,7 +145,7 @@ public:
 protected:
     std::atomic_bool m_threadComplete;
     std::atomic_bool m_run = false;
-    std::thread m_thread;
+    std::unique_ptr<std::thread> m_thread;
     std::mutex m_writeMutex;
     std::mutex m_readMutex;
     std::mutex m_streamMutex;
@@ -162,7 +163,7 @@ protected:
     long long m_threadIntervalMs;
 
     virtual void ReadMessages(bool &reading) = 0;
-    virtual void WriteMessages(detail::CANThreadSendQueueElement element, std::chrono::steady_clock::time_point now) = 0;
+    virtual bool WriteMessages(detail::CANThreadSendQueueElement element, std::chrono::steady_clock::time_point now) = 0;
     void ReadStreamMessages() {
         
     }
@@ -184,19 +185,28 @@ protected:
 
             for (size_t i=0;i<queueSize;i++) {
                 detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                m_sendQueue.pop();
                 if (el.m_intervalMs == -1) {
+                    m_sendQueue.pop();
                     continue;
                 }
 
                 auto now = std::chrono::steady_clock::now();
-                WriteMessages(el, now);
 
-                // Return to queue if repeated
-                if (el.m_intervalMs > 0 ) {
-                    el.m_prevTimestamp = now;
-                    m_sendQueue.push(el);
+                // Don't pop queue if send fails
+                if (WriteMessages(el, now)) {
+                    m_sendQueue.pop();
+
+                    // Return to end of queue if repeated
+                    if (el.m_intervalMs > 0 ) {
+                        el.m_prevTimestamp = now;
+                        m_sendQueue.push(el);
+                    }
+                } else {
+                    // Wait a little bit before trying again
+                    std::cout << "WriteMessages() failed, re-trying..." << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
+
             }
 
             m_writeMutex.unlock();

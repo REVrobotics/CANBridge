@@ -68,11 +68,12 @@ public:
     }
 
     void Start() override {
-        //std::cout << "Starting Thread..." << std::endl;
-        m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
-    }
+        if (m_thread.get() != nullptr && m_thread->joinable()) {
+            m_thread->join();
+        }
 
-   
+        m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::run, this);
+    }
 
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
         m_streamMutex.lock();
@@ -136,10 +137,10 @@ private:
             }
 
             m_threadStatus = CANStatus::kOk;
-        } 
+        }
    }
 
-   void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+   bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
@@ -149,16 +150,18 @@ private:
 
             // TODO: Feed back an error
             if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
+                return false;
             } else {
                 m_threadStatus = CANStatus::kOk;
-
+                return true;
             }
         }
+        return true;
    }
-}; 
+};
 
 } // namespace usb
 } // namespace rev
