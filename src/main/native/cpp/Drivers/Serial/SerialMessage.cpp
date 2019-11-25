@@ -48,8 +48,6 @@ const int CMD_API_SWDL_RETRANSMIT = 0x09E;
 
 const int ID_SIZE = 13;
 
-
-
 const int ValidIds[ID_SIZE] = {
     CMD_API_CLEAR_FAULTS,
     CMD_API_DRV_STAT,
@@ -73,7 +71,7 @@ const int ValidIds[ID_SIZE] = {
 
 bool IsValidSerialMessageId(uint16_t apiId) {
 
-    for (int i = 0; i < ID_SIZE; i++) {
+    for (int i = 0; i <= ID_SIZE; i++) {
         if (ValidIds[i] == apiId) {
             return true;
         }

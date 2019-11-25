@@ -63,7 +63,6 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
     // Search driver layer for devices
-   
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
             if (dev.port == std::string(descriptor)) {

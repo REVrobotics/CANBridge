@@ -68,14 +68,15 @@ public:
     }
 
     void Start() override {
-        //std::cout << "Starting Thread..." << std::endl;
-        m_thread = std::thread (&CandleWinUSBDeviceThread::run, this);
+        if (m_thread.get() != nullptr && m_thread->joinable()) {
+            m_thread->join();
+        }
+
+        m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::run, this);
     }
 
-   
-
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
-        m_streamMutex.lock();
+        std::lock_guard<std::mutex> lock(m_streamMutex);
 
         // Create the handle
         *handle = m_counter++;
@@ -84,8 +85,6 @@ public:
         m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
 
         *status = CANStatus::kOk;
-
-        m_streamMutex.unlock();
     }
 
 
@@ -119,27 +118,29 @@ private:
             } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
 
                 // The queue is for streaming API, implement that here
-                m_readMutex.lock();
-                m_readStore[incomingFrame.can_id] = msg;
-                m_readMutex.unlock();
+                {
+                    std::lock_guard<std::mutex> lock(m_readMutex);
+                    m_readStore[incomingFrame.can_id] = msg;
+                }
 
-                m_streamMutex.lock();
-                for (auto& stream : m_readStream) {
-                    // Compare current size of the buffer to the max size of the buffer
-                    if (!stream.second->messages.IsFull()
-                        && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                        msg->GetMessageId())) {
-                        stream.second->messages.Add(msg);
+                {
+                    std::lock_guard<std::mutex> lock(m_streamMutex);
+                    for (auto& stream : m_readStream) {
+                        // Compare current size of the buffer to the max size of the buffer
+                        if (!stream.second->messages.IsFull()
+                            && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                            msg->GetMessageId())) {
+                            stream.second->messages.Add(msg);
+                        }
                     }
                 }
-                m_streamMutex.unlock();
             }
 
             m_threadStatus = CANStatus::kOk;
-        } 
+        }
    }
 
-   void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+   bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
@@ -149,16 +150,18 @@ private:
 
             // TODO: Feed back an error
             if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
+                return false;
             } else {
                 m_threadStatus = CANStatus::kOk;
-
+                return true;
             }
         }
+        return true;
    }
-}; 
+};
 
 } // namespace usb
 } // namespace rev

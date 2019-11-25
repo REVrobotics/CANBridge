@@ -80,7 +80,7 @@ public:
                 std::cout << port << " already open" << std::endl;
             }
         } catch(const std::exception& e) {
-            (void)e.what();
+            std::cout << "Failed to open serial port: " << e.what() << std::endl;
             m_run = false;
         }
 
@@ -93,32 +93,32 @@ public:
     }
 
     void Start() override {
-        m_thread = std::thread(&SerialDeviceThread::run, this);
+        if (m_thread.get() != nullptr && m_thread->joinable()) {
+            m_thread->join();
+        }
+        m_thread = std::make_unique<std::thread>(&SerialDeviceThread::SerialRun, this);
     }
 
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
-        m_streamMutex.lock();
+        {
+            std::lock_guard<std::mutex> lock(m_streamMutex);
+            if (m_run && m_device.isOpen()) {
+                // Create the handle
+                *handle = m_counter++;
 
-        if (m_run && m_device.isOpen()) {
-            // Create the handle
-            *handle = m_counter++;
+                auto now = std::chrono::steady_clock::now();
 
-            // use drv status for serial port to identify
-            uint32_t msgId = 0x2051A80;
-            uint8_t dataBuffer[8] = {0};
-
-            auto now = std::chrono::steady_clock::now();
-
-            WriteMessages(rev::usb::detail::CANThreadSendQueueElement(rev::usb::CANMessage(msgId, dataBuffer, 0, 0), 0), now);
-
-            // Add to the map
-            m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
-        } else {
-            *status = CANStatus::kError;
-        }
-        m_streamMutex.unlock();
+                // Add to the map
+                m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
+            } else {
+                *status = CANStatus::kError;
+            }
+        }        
+        // use drv status for serial port to identify
+        uint32_t msgId = 0x2051A80;
+        uint8_t dataBuffer[8] = {0};
+        EnqueueMessage(rev::usb::CANMessage(msgId, dataBuffer, 0, 0), 0);
     }
-
 
 private:
     serial::Serial m_device;
@@ -161,22 +161,24 @@ private:
 
                     auto msg = std::make_shared<CANMessage>(msgId, msgData, 8);
 
-                    m_readMutex.lock();
-                    if (msg->GetSize() != 0) {
-                        m_readStore[msgId] = msg;
-                    }
-                    m_readMutex.unlock();
-
-                    m_streamMutex.lock();
-                    for (auto& stream : m_readStream) {
-                        // Compare current size of the buffer to the max size of the buffer
-                        if (!stream.second->messages.IsFull()
-                            && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
-                            msg->GetMessageId())) {
-                            stream.second->messages.Add(msg);
+                    {
+                        std::lock_guard<std::mutex> lock(m_readMutex);
+                        if (msg->GetSize() != 0) {
+                            m_readStore[msgId] = msg;
                         }
                     }
-                    m_streamMutex.unlock();
+
+                    {
+                        std::lock_guard<std::mutex> lock(m_streamMutex);
+                        for (auto& stream : m_readStream) {
+                            // Compare current size of the buffer to the max size of the buffer
+                            if (!stream.second->messages.IsFull()
+                                && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
+                                msg->GetMessageId())) {
+                                stream.second->messages.Add(msg);
+                            }
+                        }
+                    }
 
                     reading = false;
                 }
@@ -190,7 +192,7 @@ private:
        }
     }
 
-    void WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+    bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         uint32_t sentMsgId = el.m_msg.GetMessageId();
         uint16_t apiId = el.m_msg.GetApiId();
 
@@ -201,7 +203,7 @@ private:
         // std::cout << "serial write >> " << std::hex << sentMsgId << " Is API ID: " << std::hex << apiId << " Valid? " << (IsValidSerialMessageId(apiId) ? "Yes" : "No") << std::endl;
 
 
-        if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && IsValidSerialMessageId(apiId)) {
+        if ((el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) && (IsValidSerialMessageId(apiId) || IsConfigParameter(apiId))) {
             // Little endian
             uint8_t idBuffer[4];
             uint8_t dataBuffer[8];
@@ -244,14 +246,63 @@ private:
 
             size_t bytesWritten = m_device.write(buffer, bufferSize);
 
+            //TODO: figure out why this is sometimes neccessary on WIN32 to avoid recieving
+            //1 byte frames... Maybe reading the buffer when size = 1?
+            //Maybe on the read side call read with size 1
+            //in a loop of 12 with an overall timeout?
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+
             // std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (bytesWritten != bufferSize) {
-                // std::cout << "Failed to send message, wrote " << bytesWritten << " bytes of data." << std::endl;
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
+                return false;
             } else {
                 m_threadStatus = CANStatus::kOk;
+                return true;
                 // std::cout << "Message sent" << std::endl;
+            }
+        }
+        return false;
+    }
+    
+    void SerialRun() {
+        while (m_threadComplete == false && m_run) {
+            m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
+            auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
+
+            // Legacy serial port devices always do Write[12 bits] ... Read[12 bits] for every operation            
+            bool doRead = false;
+            {
+                std::lock_guard<std::mutex> lock(m_writeMutex);
+                if (m_sendQueue.size() > 0) {
+                    detail::CANThreadSendQueueElement el = m_sendQueue.front();
+                    m_sendQueue.pop();
+                    if (el.m_intervalMs == -1) {
+                        continue;
+                    }
+
+                    auto now = std::chrono::steady_clock::now();
+
+                    // Legacy serial driver skips a lot of unsupported messages, don't requeue
+                    if (WriteMessages(el, now)) {
+                        // Return to end of queue if repeated
+                        if (el.m_intervalMs > 0 ) {
+                            el.m_prevTimestamp = now;
+                            
+                            m_sendQueue.push(el);
+                        }
+                        doRead = true;
+                    }
+                }
+            }
+            if (doRead) {
+                ReadMessages(doRead);
+            }            
+
+            // 3) Stall thread
+            if (m_sendQueue.size() == 0) {
+                std::this_thread::sleep_until(sleepTime);
             }
         }
     }
