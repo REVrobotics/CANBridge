@@ -29,17 +29,6 @@ nativeUtils {
       CANBridge {
       }
   }
-  privateExportsConfigs {
-    CandleLib {
-      exportsFile = project.file("src/main/native/c/candlelib/symbols.txt")
-    }
-  }
-  privateExportsConfigs {
-    SerialLib {
-      exportsFile = project.file("src/main/native/cpp/serial/symbols.txt")
-    }
-  }
-
 }
 
 model {
@@ -61,23 +50,12 @@ model {
             include '**/*.cpp'
           }
           exportedHeaders {
-            srcDirs 'src/main/native/include'
+            srcDir 'src/main/native/include'
+            srcDir 'src/main/native/include/candlelib'
+            srcDir 'src/main/native/include/serial'
           }
         }
-      }
-      binaries.all {
-        lib library: "CandleLib", linkage: 'static'
-        lib library: "SerialLib", linkage: 'static'
-        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
-          it.buildable = false
-        }
-      }
-
-      nativeUtils.useRequiredLibrary(it, "driver_shared")
-    }
-    CandleLib(NativeLibrarySpec) {
-      sources {
-        c {
+        libuvCpp(CSourceSet) {
           source {
             srcDirs 'src/main/native/c/candlelib/'
             include '**/*.c'
@@ -86,16 +64,7 @@ model {
             srcDirs 'src/main/native/include/candlelib'
           }
         }
-      }
-      binaries.all {
-        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
-          it.buildable = false
-        }
-      }
-    }
-    SerialLib(NativeLibrarySpec) {
-      sources {
-        cpp {
+        serial(CppSourceSet) {
           source {
             srcDirs 'src/main/native/cpp/serial/'
             include '**/*.cc'
@@ -110,8 +79,9 @@ model {
           it.buildable = false
         }
       }
-    }
 
+      nativeUtils.useRequiredLibrary(it, "driver_shared")
+    }
   }
 
   testSuites {
@@ -128,8 +98,6 @@ model {
       }
 
       binaries.all {
-        lib library: "CandleLib", linkage: 'static'
-        lib library: "SerialLib", linkage: 'static'
         if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio
             || it.targetPlatform.name == nativeUtils.wpi.platforms.raspbian
             || it.targetPlatform.name == nativeUtils.wpi.platforms.aarch64bionic) {

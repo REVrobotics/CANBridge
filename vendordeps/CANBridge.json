@@ -28,10 +28,10 @@
         {
             "groupId": "com.revrobotics.usb",
             "artifactId": "CANBridge-cpp",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "libName": "CANBridge",
             "headerClassifier": "headers",
-            "sharedLibrary": true,
+            "sharedLibrary": false,
             "skipInvalidPlatforms": false,
             "binaryPlatforms": [
                 "windowsx86-64",
