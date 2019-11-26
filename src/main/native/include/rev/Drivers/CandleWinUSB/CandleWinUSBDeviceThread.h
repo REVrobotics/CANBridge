@@ -72,7 +72,7 @@ public:
             m_thread->join();
         }
 
-        m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::run, this);
+        m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::CandleRun, this);
     }
 
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
@@ -141,7 +141,7 @@ private:
    }
 
    bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
-        if (el.m_intervalMs == 0 || now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) {
+        if (el.m_intervalMs == 0 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
             frame.can_id = el.m_msg.GetMessageId();
@@ -150,7 +150,7 @@ private:
 
             // TODO: Feed back an error
             if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
                 return false;
@@ -159,8 +159,50 @@ private:
                 return true;
             }
         }
-        return true;
+        return false;
    }
+
+    void CandleRun() {
+        while (m_threadComplete == false && m_run) {
+            m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
+            auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
+
+            // 1) Handle all received CAN traffic
+            bool reading = false;
+            ReadMessages(reading);
+
+            // 2) Schedule CANMessage queue
+            {
+                std::lock_guard<std::mutex> lock(m_writeMutex);
+                if (m_sendQueue.size() > 0) {
+                    detail::CANThreadSendQueueElement el = m_sendQueue.front();
+                    if (el.m_intervalMs == -1) {
+                        m_sendQueue.pop();
+                        continue;
+                    }
+
+                    auto now = std::chrono::steady_clock::now();
+
+                    // Don't pop queue if send fails
+                    if (WriteMessages(el, now)) {
+                        m_sendQueue.pop();
+
+                        // Return to end of queue if repeated
+                        if (el.m_intervalMs > 0 ) {
+                            el.m_prevTimestamp = now;
+                            m_sendQueue.push(el);
+                        }
+                    }
+                }
+            }
+
+            // 3) Stall thread
+            if (!reading && m_sendQueue.empty()) {
+                std::this_thread::sleep_until(sleepTime);
+            }
+        }
+
+    }
 };
 
 } // namespace usb
