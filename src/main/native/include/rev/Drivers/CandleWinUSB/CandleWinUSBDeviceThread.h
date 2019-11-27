@@ -99,7 +99,6 @@ private:
 
         // Received a new frame, store it
         if (reading) {
-            auto msg = std::make_shared<CANMessage>(incomingFrame.can_id, incomingFrame.data, incomingFrame.can_dlc, incomingFrame.timestamp_us);
             candle_frametype_t frameType = candle_frame_type(&incomingFrame);
             if(frameType == CANDLE_FRAMETYPE_ERROR) {
                 // Parse error data
@@ -116,13 +115,19 @@ private:
                     m_statusDetails.transmitErrCount++;
                 }
             } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
+                
+                auto msg = std::make_shared<CANMessage>(candle_frame_id(&incomingFrame),
+                                                        candle_frame_data(&incomingFrame),
+                                                        candle_frame_dlc(&incomingFrame),
+                                                        candle_frame_timestamp_us(&incomingFrame));
 
-                // The queue is for streaming API, implement that here
+                // Read functions
                 {
                     std::lock_guard<std::mutex> lock(m_readMutex);
-                    m_readStore[incomingFrame.can_id] = msg;
+                    m_readStore[candle_frame_id(&incomingFrame)] = msg;
                 }
 
+                // Streaming functions
                 {
                     std::lock_guard<std::mutex> lock(m_streamMutex);
                     for (auto& stream : m_readStream) {
@@ -144,7 +149,8 @@ private:
         if (el.m_intervalMs == 0 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
-            frame.can_id = el.m_msg.GetMessageId();
+            // set extended id flag
+            frame.can_id = el.m_msg.GetMessageId() | 0x80000000;
             memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
             frame.timestamp_us = now.time_since_epoch().count() / 1000;
 
