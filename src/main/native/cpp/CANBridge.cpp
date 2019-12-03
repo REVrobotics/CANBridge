@@ -129,7 +129,9 @@ int CANBridge_GetNumberOfErrors()
 
 void CANBridge_FreeScan(c_CANBridge_ScanHandle handle)
 {
-    delete handle;
+    if (handle != NULL) {
+        delete handle;
+    }
 }
 
 
@@ -290,7 +292,7 @@ void CANBridge_UnregisterDeviceFromHAL(const char* descriptor)
 {
     std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>>::const_iterator device = CANDeviceList.begin();
     for ( ; device != CANDeviceList.end(); ) {
-        if (device->first.get()->GetDescriptor().compare(descriptor) == 0) {
+        if (device->first.get() != nullptr && device->first->GetDescriptor().compare(descriptor) == 0) {
             device = CANDeviceList.erase(device);
             return;
         } else {

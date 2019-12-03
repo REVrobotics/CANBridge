@@ -59,6 +59,15 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         throw "Failed to open device!";
     }
 
+    // Set FRC capable settings, SPARK MAX is hard coded to this, but other devices (e.g. canable with 
+    // candlelight_fw) may need to be set to it explicitly. Note this only works for devices with 48MHz
+    // clocks, and could be expanded in the future to work with any device that properly reports its 
+    // own capabilities.
+    if (!candle_channel_set_bitrate(hDev, CANDLE_DEFAULT_CHANNEL, 1000000)) {
+        std::cout << "Unable to set bitrate! " << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
+    }
+
+
     if (candle_channel_start(hDev, CANDLE_DEFAULT_CHANNEL, CANDLE_DEFAULT_FLAGS) == false) {
         std::cout << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
         close_candle_dev(hDev);

@@ -1,9 +1,10 @@
 #! /bin/bash
 
+BUILD_YEAR=2020
 BUILD_REPO_DIR=./build/repos
 RELEASE_DIR=$BUILD_REPO_DIR/releases/com/revrobotics/usb
-MOVE_DIR=C:/Users/Public/frc2019/maven/com/revrobotics/usb
-VENDOR_DIR=C:/Users/Public/frc2019/vendordeps
+MOVE_DIR=C:/Users/Public/wpilib/$BUILD_YEAR/maven/com/revrobotics/usb
+VENDOR_DIR=C:/Users/Public/wpilib/$BUILD_YEAR/vendordeps
 
 echo "*** Moving maven directories ***"
 cp -r $RELEASE_DIR/CANBridge-cpp $MOVE_DIR
