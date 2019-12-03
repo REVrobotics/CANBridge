@@ -46,6 +46,8 @@
 #include "rev/CANStatus.h"
 #include "rev/Drivers/DriverDeviceThread.h"
 
+#include "utils/ThreadUtils.h"
+
 #include "candlelib/candle.h"
 
 #include <mockdata/CanData.h>
@@ -73,6 +75,9 @@ public:
         }
 
         m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::CandleRun, this);
+
+        // Set to high priority to prevent buffer overflow on the device on high client CPU load
+        utils::SetThreadPriority(m_thread.get(), utils::ThreadPriority::High);
     }
 
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
