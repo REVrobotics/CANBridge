@@ -44,6 +44,8 @@
 #include "rev/CANBridgeUtils.h"
 #include "rev/CANStatus.h"
 
+#include "utils/ThreadUtils.h"
+
 #include <mockdata/CanData.h>
 #include <hal/CAN.h>
 
