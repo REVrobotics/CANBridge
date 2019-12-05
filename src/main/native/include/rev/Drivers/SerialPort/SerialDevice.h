@@ -64,7 +64,6 @@ private:
     SerialDeviceThread m_thread;
     std::string m_descriptor;
     std::string m_name;
-    bool m_properlyOpened = false;
 };
 
 } // namespace usb

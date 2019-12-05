@@ -271,18 +271,25 @@ static void CANBridge_RegisterHAL()
     }
 }
 
-void CANBridge_RegisterDeviceToHAL(const char* descriptor, uint32_t messageId, uint32_t messageMask)
+void CANBridge_RegisterDeviceToHAL(const char* descriptor, uint32_t messageId, uint32_t messageMask, int32_t* status)
 {
     CANBridge_RegisterHAL();
 
     for (auto& driver : CANDriverList) {
         for (auto d : driver->GetDevices()) {
             if (d.descriptor.compare(descriptor) == 0) {
-                rev::usb::CANBridge_CANFilter dev;
-                dev.messageId = messageId;
-                dev.messageMask = messageMask;
-                CANDeviceList.push_back(std::make_pair(driver->CreateDeviceFromDescriptor(descriptor), dev));
-                return;
+                rev::usb::CANBridge_CANFilter filter;
+                filter.messageId = messageId;
+                filter.messageMask = messageMask;
+                auto device = driver->CreateDeviceFromDescriptor(descriptor);
+                if (device != nullptr) {
+                    CANDeviceList.push_back(std::make_pair(std::move(device), filter));
+                    *status = (int32_t)rev::usb::CANStatus::kOk;
+                    return;
+                } else {
+                    *status = (int32_t)rev::usb::CANStatus::kError;
+                    return;
+                }
             }
         }
     }

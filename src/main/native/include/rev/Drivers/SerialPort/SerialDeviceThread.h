@@ -72,24 +72,16 @@ public:
         m_device.setStopbits(serial::stopbits_t::stopbits_one);
         m_device.setFlowcontrol(serial::flowcontrol_t::flowcontrol_none);
 
-        try {
-            if (!m_device.isOpen()) {
-                m_device.open();
-                m_run = true;
-            } else {
-                std::cout << port << " already open" << std::endl;
-            }
-        } catch(const std::exception& e) {
-            std::cout << "Failed to open serial port: " << e.what() << std::endl;
-            m_run = false;
+        if (!m_device.isOpen()) {
+            m_device.open();
+        } else {
+            std::cout << port << " already open" << std::endl;
         }
 
     }
     ~SerialDeviceThread()
     {
-        if (m_run) {
-            m_device.close();
-        }
+        m_device.close();
     }
 
     void Start() override {
@@ -102,17 +94,14 @@ public:
     void OpenStream(uint32_t* handle, CANBridge_CANFilter filter, uint32_t maxSize, CANStatus *status) override {
         {
             std::lock_guard<std::mutex> lock(m_streamMutex);
-            if (m_run && m_device.isOpen()) {
-                // Create the handle
-                *handle = m_counter++;
+            // Create the handle
+            *handle = m_counter++;
 
-                auto now = std::chrono::steady_clock::now();
+            auto now = std::chrono::steady_clock::now();
 
-                // Add to the map
-                m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
-            } else {
-                *status = CANStatus::kError;
-            }
+            // Add to the map
+            m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
+            
         }        
         // use drv status for serial port to identify
         uint32_t msgId = 0x2051A80;
@@ -267,7 +256,7 @@ private:
     }
     
     void SerialRun() {
-        while (m_threadComplete == false && m_run) {
+        while (m_threadComplete == false) {
             m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 

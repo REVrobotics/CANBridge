@@ -62,9 +62,7 @@ public:
     CandleWinUSBDeviceThread() =delete;
     CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs),
         m_device(dev)
-    {
-        m_run = true;
-    }
+    { }
     ~CandleWinUSBDeviceThread()
     {
     }
@@ -161,7 +159,7 @@ private:
 
             // TODO: Feed back an error
             if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
                 return false;
@@ -174,7 +172,7 @@ private:
    }
 
     void CandleRun() {
-        while (m_threadComplete == false && m_run) {
+        while (m_threadComplete == false) {
             m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 

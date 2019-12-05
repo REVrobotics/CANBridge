@@ -46,11 +46,7 @@ SerialDevice::SerialDevice(std::string port) :
 {
     m_descriptor = port;
     m_name = "SPARK MAX";     
-    if (m_thread.ShouldRun()) {
-        m_thread.Start();
-        m_properlyOpened = true;
-    }
-
+    m_thread.Start();
 }
 
 SerialDevice::~SerialDevice()
@@ -81,12 +77,8 @@ int SerialDevice::GetNumberOfErrors()
 
 CANStatus SerialDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
-    if (m_properlyOpened) {
-        m_thread.EnqueueMessage(msg, periodMs);
-        return m_thread.GetLastThreadError();
-    } else {
-        return CANStatus::kError;
-    }
+    m_thread.EnqueueMessage(msg, periodMs);
+    return m_thread.GetLastThreadError();
 }
 
 CANStatus SerialDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask)
@@ -111,6 +103,7 @@ CANStatus SerialDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint
     } else {
         status = CANStatus::kError;
     }
+    
 
     return status;
 }
@@ -119,30 +112,18 @@ CANStatus SerialDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CAN
 {
     // Register the stream with the correct buffer size
     CANStatus stat = CANStatus::kOk;
-    if (m_properlyOpened) {
-        m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
-    } else {
-        stat = CANStatus::kError;
-    }
+    m_thread.OpenStream(sessionHandle, filter, maxSize, &stat);
     return m_thread.GetLastThreadError();
 }
 CANStatus SerialDevice::CloseStreamSession(uint32_t sessionHandle)
 {
-    if (m_properlyOpened) {
-        m_thread.CloseStream(sessionHandle);
-        return m_thread.GetLastThreadError();
-    } else {
-        return CANStatus::kError;
-    }
+    m_thread.CloseStream(sessionHandle);
+    return m_thread.GetLastThreadError();
 }
 CANStatus SerialDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead)
 {
-    if (m_properlyOpened) {
-        m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
-        return m_thread.GetLastThreadError();
-    } else {
-        return CANStatus::kError;
-    }
+    m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
+    return m_thread.GetLastThreadError();
 }
 
 CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr)
@@ -160,7 +141,7 @@ CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_
 
 bool SerialDevice::IsConnected()
 {
-    return m_properlyOpened;
+    return true;
 }
 
 
