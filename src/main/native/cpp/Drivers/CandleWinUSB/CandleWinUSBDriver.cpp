@@ -77,7 +77,11 @@ std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const 
                 if (candle_dev_get(clist, i, &dev)) {
                     std::string path = unicode_decode(candle_dev_get_path(dev));
                     if (path == std::string(descriptor)) {
-                        return std::make_unique<CandleWinUSBDevice>(dev);
+                        try {
+                            return std::make_unique<CandleWinUSBDevice>(dev);
+                        } catch(...) {
+                            // do nothing if it failed
+                        }
                     }
                 }
             }

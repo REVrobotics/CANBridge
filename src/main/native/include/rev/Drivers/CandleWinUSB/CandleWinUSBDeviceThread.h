@@ -62,9 +62,7 @@ public:
     CandleWinUSBDeviceThread() =delete;
     CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs),
         m_device(dev)
-    {
-        m_run = true;
-    }
+    { }
     ~CandleWinUSBDeviceThread()
     {
     }
@@ -174,7 +172,7 @@ private:
    }
 
     void CandleRun() {
-        while (m_threadComplete == false && m_run) {
+        while (m_threadComplete == false) {
             m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 

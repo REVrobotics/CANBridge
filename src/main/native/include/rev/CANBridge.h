@@ -114,7 +114,7 @@ void CANBridge_FreeScan(c_CANBridge_ScanHandle handle);
  * to be handled by this device. Pass 0 to match all messages.
  * 
  */
-void CANBridge_RegisterDeviceToHAL(const char* descriptor, uint32_t messageId, uint32_t messageMask);
+void CANBridge_RegisterDeviceToHAL(const char* descriptor, uint32_t messageId, uint32_t messageMask, int32_t* status);
 
 /**
  * Unregister the device from the WPILib HAL.

@@ -65,9 +65,13 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* 
     // Search driver layer for devices
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
-            if (dev.port == std::string(descriptor)) {
+        if (dev.port == std::string(descriptor)) {
+            try {
                 return std::make_unique<SerialDevice>(dev.port);
+            } catch(...) {
+                // do nothing if it failed
             }
+        }
     }
 
     return std::unique_ptr<CANDevice>();

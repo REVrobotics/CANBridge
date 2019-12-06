@@ -118,10 +118,6 @@ public:
         return halMsg;
     }
 
-    bool ShouldRun() {
-        return m_run;
-    }
-
     void GetCANStatus(rev::usb::CANStatusDetails* details) {
         details = &m_statusDetails;
     }
@@ -141,7 +137,6 @@ public:
 
 protected:
     std::atomic_bool m_threadComplete;
-    std::atomic_bool m_run = false;
     std::unique_ptr<std::thread> m_thread;
     std::mutex m_writeMutex;
     std::mutex m_readMutex;
@@ -166,7 +161,7 @@ protected:
     }
 
     void run() {
-        while (m_threadComplete == false && m_run) {
+        while (m_threadComplete == false ) {
             m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
 
