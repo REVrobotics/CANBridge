@@ -81,7 +81,6 @@ std::unique_ptr<CANDevice> CandleWinUSBDriver::CreateDeviceFromDescriptor(const 
                             return std::make_unique<CandleWinUSBDevice>(dev);
                         } catch(...) {
                             // do nothing if it failed
-                            std::cout << "Failed to create CandleWinUSB device: " << std::endl;
                         }
                     }
                 }
