@@ -69,7 +69,7 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* 
             try {
                 return std::make_unique<SerialDevice>(dev.port);
             } catch(...) {
-                std::cout << "Failed to create Serial device: " << std::endl;
+                // do nothing if it failed
             }
         }
     }

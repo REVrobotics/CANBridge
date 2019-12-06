@@ -97,8 +97,6 @@ public:
             // Create the handle
             *handle = m_counter++;
 
-            auto now = std::chrono::steady_clock::now();
-
             // Add to the map
             m_readStream[*handle] = std::unique_ptr<CANStreamHandle>(new CANStreamHandle{filter.messageId, filter.messageMask, maxSize, utils::CircularBuffer<std::shared_ptr<CANMessage>>{maxSize}});
             
@@ -107,6 +105,8 @@ public:
         uint32_t msgId = 0x2051A80;
         uint8_t dataBuffer[8] = {0};
         EnqueueMessage(rev::usb::CANMessage(msgId, dataBuffer, 0, 0), 0);
+        
+        *status = CANStatus::kOk;
     }
 
 private:
@@ -174,8 +174,8 @@ private:
             } else {
                 reading = false;
             }
-        } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
+        } catch(...) {
+            // std::cout << e.what() << std::endl;
             m_threadStatus = CANStatus::kDeviceWriteError;
             m_statusErrCount++;
        }
@@ -233,7 +233,13 @@ private:
             uint8_t buffer[bufferSize];
             std::copy(dataBuffer, dataBuffer + 8, std::copy(idBuffer, idBuffer + 4, buffer));
 
-            size_t bytesWritten = m_device.write(buffer, bufferSize);
+            size_t bytesWritten = 0;
+            try {
+                bytesWritten = m_device.write(buffer, bufferSize);
+            } catch(...) {
+                m_threadStatus = CANStatus::kDeviceWriteError;
+                m_statusErrCount++;
+            }
 
             //TODO: figure out why this is sometimes neccessary on WIN32 to avoid recieving
             //1 byte frames... Maybe reading the buffer when size = 1?

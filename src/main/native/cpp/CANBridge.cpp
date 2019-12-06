@@ -218,10 +218,13 @@ void CANBridge_OpenStreamSessionCallback(
     const char* name, void* param, uint32_t* sessionHandle, uint32_t messageID,
     uint32_t messageIDMask, uint32_t maxMessages, int32_t* status)
 {
+    rev::usb::CANStatus stat = rev::usb::CANStatus::kError;
     for (auto& dev : CANDeviceList) {
-        auto stat = dev.first->OpenStreamSession(sessionHandle, {messageID, messageIDMask}, maxMessages);
-        *status = (int32_t)stat;
+        if (dev.first != nullptr) {
+            stat = dev.first->OpenStreamSession(sessionHandle, {messageID, messageIDMask}, maxMessages);
+        }
     }
+    *status = (int32_t)stat;
 }
 
 void CANBridge_CloseStreamSessionCallback(const char* name, void* param, uint32_t sessionHandle)
