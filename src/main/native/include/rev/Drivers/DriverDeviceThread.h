@@ -93,7 +93,11 @@ public:
 
     void CloseStream(uint32_t handle) {
         std::lock_guard<std::mutex> lock(m_streamMutex);
-        m_readStream.erase(handle);
+        auto streamItr = m_readStream.find(handle);
+
+        if (streamItr != m_readStream.end()) {
+            m_readStream.erase(streamItr);
+        }
     }
 
     void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, 
