@@ -103,6 +103,13 @@ public:
     void ReadStream(uint32_t handle, struct HAL_CANStreamMessage* messages, uint32_t messagesToRead, 
                     uint32_t* messagesRead) {
         std::lock_guard<std::mutex> lock(m_streamMutex);
+        auto streamItr = m_readStream.find(handle);
+        if (streamItr == m_readStream.end()) {
+            // Stream not found, throw error
+            m_threadStatus = CANStatus::kError;
+            return;
+        }
+
         *messagesRead = m_readStream[handle]->messages.GetCount(); // first before remove
         for (uint32_t i = 0; i < *messagesRead; i++) {
             std::shared_ptr<CANMessage> m;
