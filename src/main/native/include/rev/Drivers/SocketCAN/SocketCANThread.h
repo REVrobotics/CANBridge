@@ -57,13 +57,12 @@ namespace rev {
 namespace usb {
 
 
-class CandleWinUSBDeviceThread :public DriverDeviceThread { 
+class SocketCANDeviceThread :public DriverDeviceThread { 
 public:
-    CandleWinUSBDeviceThread() =delete;
-    CandleWinUSBDeviceThread(candle_handle dev, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs),
-        m_device(dev)
+    SocketCANDeviceThread() =delete;
+    SocketCANDeviceThread(const char* port, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs)
     { }
-    ~CandleWinUSBDeviceThread()
+    ~SocketCANDeviceThread()
     {
     }
 
@@ -72,7 +71,7 @@ public:
             m_thread->join();
         }
 
-        m_thread = std::make_unique<std::thread>(&CandleWinUSBDeviceThread::CandleRun, this);
+        m_thread = std::make_unique<std::thread>(&SocketCANDeviceThread::CandleRun, this);
 
         // Set to high priority to prevent buffer overflow on the device on high client CPU load
         utils::SetThreadPriority(m_thread.get(), utils::ThreadPriority::High);

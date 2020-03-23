@@ -26,58 +26,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
+#ifdef __linux__
 
-#include "rev/Drivers/SerialPort/SerialDriver.h"
-#include "rev/Drivers/SerialPort/SerialDevice.h"
-#include "rev/CANBridgeUtils.h"
-
-#include "serial/serial.h"
+#include "rev/Drivers/SocketCAN/SocketCANDriver.h"
+#include "rev/Drivers/SocketCAN/SocketCANDevice.h"
 
 #include <map>
 #include <iostream>
 #include <memory>
-#include <sstream>
 
 namespace rev {
 namespace usb {
 
-static const std::string SparkMax_HardwareId = "USB\\VID_0483&PID_5740&REV_0200";
-
-std::vector<CANDeviceDetail> SerialDriver::GetDevices()
+std::vector<CANDeviceDetail> SocketCANDriver::GetDevices()
 {
-    // Search driver layer for devices
     std::vector<CANDeviceDetail> retval;
-
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-        if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
-            std::string name("SPARK MAX"); 
-            retval.push_back({dev.port, name, this->GetName()}); 
-        }
-    }
 
     return retval;
 }
 
-std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* descriptor)
+std::unique_ptr<CANDevice> SocketCANDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
-    // Search driver layer for devices
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-        if (dev.port == std::string(descriptor)) {
-            try {
-                return std::make_unique<SerialDevice>(dev.port);
-            } catch(...) {
-                // do nothing if it failed
-            }
-        }
-    }
+    uint8_t num_interfaces;
 
+    try {
+        return std::make_unique<SocketCANDevice>(descriptor);
+    } catch(...) {
+        // do nothing if it failed
+    }
     return std::unique_ptr<CANDevice>();
 }
-
-
 
 } // namespace usb
 } // namespace rev

@@ -26,62 +26,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
-
-#include "rev/Drivers/SerialPort/SerialDriver.h"
-#include "rev/Drivers/SerialPort/SerialDevice.h"
-#include "rev/CANBridgeUtils.h"
-
-#include "serial/serial.h"
+#pragma once
 
 #include <map>
-#include <iostream>
-#include <memory>
-#include <sstream>
+#include <string>
+
+#include "rev/Drivers/SocketCAN/SocketCANThread.h"
+#include "rev/CANDevice.h"
+#include "rev/CANMessage.h"
+#include "rev/CANStatus.h"
 
 namespace rev {
 namespace usb {
 
-static const std::string SparkMax_HardwareId = "USB\\VID_0483&PID_5740&REV_0200";
+class SocketCANDevice : public CANDevice {
+public:
+    SocketCANDevice() =delete;
+    SocketCANDevice(const char* port);
+    virtual ~SocketCANDevice();
 
-std::vector<CANDeviceDetail> SerialDriver::GetDevices()
-{
-    // Search driver layer for devices
-    std::vector<CANDeviceDetail> retval;
+    virtual std::string GetName() const;
+    virtual std::string GetDescriptor() const;
+    virtual int GetNumberOfErrors();
 
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-        if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
-            std::string name("SPARK MAX"); 
-            retval.push_back({dev.port, name, this->GetName()}); 
-        }
-    }
+    virtual int GetId() const;
 
-    return retval;
-}
+    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
+    virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) override;
+    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle);
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead);
 
-std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* descriptor)
-{
-    // Search driver layer for devices
-    std::vector<serial::PortInfo> found = serial::list_ports();
-    for (auto& dev : found) {
-        if (dev.port == std::string(descriptor)) {
-            try {
-                return std::make_unique<SerialDevice>(dev.port);
-            } catch(...) {
-                // do nothing if it failed
-            }
-        }
-    }
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr);
 
-    return std::unique_ptr<CANDevice>();
-}
-
-
+    virtual bool IsConnected();
+private:
+    candle_handle m_handle;
+    SocketCANDeviceThread m_thread;
+    std::string m_descriptor;
+    std::string m_name;
+};
 
 } // namespace usb
 } // namespace rev
-
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32
