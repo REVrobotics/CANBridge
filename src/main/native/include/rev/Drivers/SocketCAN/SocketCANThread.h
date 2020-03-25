@@ -26,6 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if 0
+
 #pragma once
 
 #include <thread>
@@ -215,3 +217,5 @@ private:
 
 } // namespace usb
 } // namespace rev
+
+#endif

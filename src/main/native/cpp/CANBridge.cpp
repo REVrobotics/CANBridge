@@ -60,8 +60,11 @@ struct CANBridge_Scan {
 static const std::vector<rev::usb::CANDriver*> CANDriverList = {
 #ifdef _WIN32
     new rev::usb::CandleWinUSBDriver(),
-#endif
     new rev::usb::SerialDriver()
+#endif
+#ifdef __linux__
+    //new rev::usb::SocketCANDriver()
+#endif
 };
 
 static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>> CANDeviceList = {};

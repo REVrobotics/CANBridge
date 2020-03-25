@@ -35,6 +35,8 @@
 #include <iostream>
 #include <memory>
 
+#include <net/if.h>
+
 namespace rev {
 namespace usb {
 
@@ -42,19 +44,47 @@ std::vector<CANDeviceDetail> SocketCANDriver::GetDevices()
 {
     std::vector<CANDeviceDetail> retval;
 
+    // TODO: Better way of doing this?
+    // find canx or vcanx interface names
+    struct if_nameindex *if_nidxs, *intf;
+
+    if_nidxs = if_nameindex();
+    if ( if_nidxs != NULL )
+    {
+        for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++)
+        {
+            char* buf = intf->if_name;
+
+            // Not possible can name, protect later compares
+            if (strnlen(buf, 4) < 4) {
+                continue;
+            }
+
+            // possibly vcanx
+            if (buf[0] == 'v') {
+                buf++;
+            }
+
+            if (strncmp(buf, "can", 3) == 0) {
+                std::string ifnameStr = std::string(intf->if_name);
+                retval.push_back( {ifnameStr, ifnameStr, this->GetName()} );
+            }
+        }
+
+        if_freenameindex(if_nidxs);
+    }
+
     return retval;
 }
 
 std::unique_ptr<CANDevice> SocketCANDriver::CreateDeviceFromDescriptor(const char* descriptor)
 {
-    uint8_t num_interfaces;
-
     try {
         return std::make_unique<SocketCANDevice>(descriptor);
     } catch(...) {
         // do nothing if it failed
     }
-    return std::unique_ptr<CANDevice>();
+    return std::unique_ptr<CANDevice>(nullptr);
 }
 
 } // namespace usb

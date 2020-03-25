@@ -61,8 +61,7 @@ public:
 
     virtual bool IsConnected();
 private:
-    candle_handle m_handle;
-    SocketCANDeviceThread m_thread;
+    //SocketCANDeviceThread m_thread;
     std::string m_descriptor;
     std::string m_name;
 };

@@ -32,8 +32,31 @@
 
 #include "gtest/gtest.h"
 
+#include <rev/Drivers/SocketCAN/SocketCANDriver.h>
+
 
 int main(int argc, char** argv) {
+
+  rev::usb::SocketCANDriver driver;
+
+  auto output = driver.GetDevices();
+
+  if (output.size() == 0) {
+    std::cout << "No devices found" << std::endl;
+    return 1;
+  }
+
+  for (auto itr = output.begin(); itr != output.end(); itr++) {
+    std::cout << itr->descriptor << std::endl;
+  }
+
+  auto device = driver.CreateDeviceFromDescriptor(output[0].descriptor.c_str());
+
+  std::cout << "Selected device: " << device->GetName() << std::endl;
+
+  return 0;
+
+  #if 0
   HAL_Initialize(500, 0);
   frc::MockDS ds;
   ds.start();
@@ -43,4 +66,5 @@ int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   int ret = RUN_ALL_TESTS();
   return ret;
+  #endif
 }
