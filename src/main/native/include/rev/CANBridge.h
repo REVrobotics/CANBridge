@@ -37,7 +37,6 @@ extern "C" {
 
 typedef struct CANBridge_Scan* c_CANBridge_ScanHandle;
 
-
 /**
  * Scan for any available REV USB compatible devices. 
  * The scan results include only directly connected devices
@@ -51,7 +50,7 @@ c_CANBridge_ScanHandle CANBridge_Scan();
  * Returns the number of devices discovered by scan. Includes
  * the device used as a bridge in the count of devices detected
  * 
- * @param previously opened c_CANBridge_ScanHandle
+ * @param handle previously opened c_CANBridge_ScanHandle
  * 
  * @return number of devices detected, including the bridge device
  */
