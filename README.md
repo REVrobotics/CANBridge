@@ -26,6 +26,16 @@ Build and publish steps are done using the Gradle wrapper, `gradlew`. The Gradle
 
 The output folders will be generated under `~\releases\maven\`.
 
+## Linux
+
+This branch is a work in progress. The latest firmware version will work with Linux if the socketCAN and gs_usb drivers are enabled. The following udev rule will work to enable this:
+
+/etc/udev/rules.d/
+
+```
+ACTION=="add", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="a30e", RUN+="/sbin/modprobe gs_usb" RUN+="/bin/sh -c 'echo 0483 a30e > /sys/bus/usb/drivers/gs_usb/new_id'"
+```
+
 ## Changelog
 
 The SDK Changelog can be viewed with [Changelog.md](Changelog.md).
