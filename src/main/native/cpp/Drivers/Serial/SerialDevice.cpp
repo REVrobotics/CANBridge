@@ -33,7 +33,7 @@
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #include "serial/serial.h"

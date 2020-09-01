@@ -34,7 +34,7 @@
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #define CANDLE_DEFAULT_CHANNEL 0
