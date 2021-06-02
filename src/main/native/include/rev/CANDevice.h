@@ -33,6 +33,7 @@
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
 #include "rev/CANBridgeUtils.h"
+#include "utils/ThreadUtils.h"
 
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
@@ -58,8 +59,12 @@ public:
     virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) = 0;
 
     virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) = 0;
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) = 0;
 
     virtual bool IsConnected() = 0;
+    virtual void setThreadPriority(utils::ThreadPriority priority) {};
+    virtual void stopRepeatedMessage(uint32_t messageId) {};
+    virtual void ClearSendQueue() {};
 };
 
 } // namespace usb

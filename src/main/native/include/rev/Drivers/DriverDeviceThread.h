@@ -37,6 +37,7 @@
 #include <map>
 #include <queue>
 #include <memory>
+#include <time.h>
 
 #include <iostream>
 
@@ -64,7 +65,7 @@ public:
         m_threadIntervalMs(threadIntervalMs),
         m_counter(counter) {
     }
-
+    
     virtual void Start() = 0;
 
     void Stop() {
@@ -133,6 +134,14 @@ public:
         details = &m_statusDetails;
     }
 
+    void GetCANStatusDetails(uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* errorTime) {
+        *busOff = m_statusDetails.busOffCount;
+        *txFull = m_statusDetails.txFullCount;
+        *receiveErr = m_statusDetails.receiveErrCount;
+        *transmitErr = m_statusDetails.transmitErrCount;
+        *errorTime = lastErrorTime;
+    }
+
     CANStatus GetLastThreadError() {
         CANStatus last = m_threadStatus;
         m_threadStatus = CANStatus::kOk;
@@ -156,6 +165,7 @@ protected:
     uint32_t m_counter;
 
     CANStatusDetails m_statusDetails;
+    time_t lastErrorTime;
     int m_statusErrCount = 0;
     CANStatus m_threadStatus = CANStatus::kOk;
 

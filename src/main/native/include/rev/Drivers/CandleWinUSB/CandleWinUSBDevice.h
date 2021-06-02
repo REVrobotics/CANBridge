@@ -60,8 +60,11 @@ public:
     virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) override;
 
     virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) override;
-
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) override;
     virtual bool IsConnected() override;
+    virtual void setThreadPriority(utils::ThreadPriority priority);
+    virtual void stopRepeatedMessage(uint32_t messageId);
+    virtual void ClearSendQueue();
 private:
     candle_handle m_handle;
     CandleWinUSBDeviceThread m_thread;
