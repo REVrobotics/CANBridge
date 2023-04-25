@@ -34,7 +34,7 @@
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #define CANDLE_DEFAULT_CHANNEL 0
@@ -87,6 +87,10 @@ CandleWinUSBDevice::~CandleWinUSBDevice()
     close_candle_dev(m_handle);
 }
 
+void CandleWinUSBDevice::ClearSendQueue() {
+    m_thread.clearQueue();
+}
+
 std::string CandleWinUSBDevice::GetName() const
 {
     return m_name;
@@ -106,6 +110,14 @@ int CandleWinUSBDevice::GetId() const
 int CandleWinUSBDevice::GetNumberOfErrors()
 {
     return m_thread.GetNumberOfErrors();
+}
+
+void CandleWinUSBDevice::setThreadPriority(utils::ThreadPriority priority) {
+    m_thread.setPriority(priority);
+}
+
+void CandleWinUSBDevice::stopRepeatedMessage(uint32_t messageId) {
+    m_thread.stopRepeatedMessage(messageId);
 }
 
 CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
@@ -158,15 +170,14 @@ CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct H
     return m_thread.GetLastThreadError();
 }
 
-CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr)
+CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) {
+    return GetCANDetailStatus(percentBusUtilization, busOff, txFull,receiveErr, transmitErr, nullptr);
+}
+
+CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime)
 {
-    rev::usb::CANStatusDetails details;
-    m_thread.GetCANStatus(&details);
-    *busOff = details.busOffCount;
-    *txFull = details.txFullCount;
-    *receiveErr = details.receiveErrCount;
-    *transmitErr = details.transmitErrCount;
-    *percentBusUtilization = 0.0; // todo how to get this
+    m_thread.GetCANStatusDetails(busOff, txFull, receiveErr, transmitErr, lastErrorTime);
+    *percentBusUtilization = 0.0; // todo how to get this 
 
     return m_thread.GetLastThreadError();
 }

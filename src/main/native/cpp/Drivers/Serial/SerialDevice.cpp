@@ -33,7 +33,7 @@
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #include "serial/serial.h"
@@ -137,6 +137,10 @@ CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_
     *percentBusUtilization = 0.0; // todo how to get this properly
     
     return m_thread.GetLastThreadError();
+}
+
+CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) {
+    return GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
 }
 
 bool SerialDevice::IsConnected()

@@ -45,7 +45,7 @@
 
 #include "rev/Drivers/SerialPort/SerialDriver.h"
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #ifdef __FRC_ROBORIO__
