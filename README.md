@@ -2,7 +2,7 @@
 
 ## Overview
 
-This respository is for the CANBridge software that is run on non-roboRIO platforms. 
+This repository is for the CANBridge software that is run on non-roboRIO platforms. 
 
 ## Build Requirements
 
