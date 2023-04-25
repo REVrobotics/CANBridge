@@ -21,10 +21,19 @@ Build and publish steps are done using the Gradle wrapper, `gradlew`. The Gradle
    - When VS Code first opens, select `Add workspace folder...` underneath `Start` on the Welcome Screen
 2. Open the VS Code terminal
    -  `View -> Terminal` or ``Ctrl+` ``
-3. Run `./gradlew build` from root
-4. Run `./gradlew publish` from root
+3. Run `./gradlew build -PreleaseMode` from root
+4. Run `./gradlew publish -PreleaseMode` from root
 
-The output folders will be generated under `~\releases\maven\`.
+The output is placed at `~\releases\maven\release\com\revrobotics\usb\CANBridge-cpp\<version>\`.
+
+When publishing a new version, create a GitHub release and attach the following artifacts to it:
+
+| Filename               | Location                                                                              |
+|------------------------|---------------------------------------------------------------------------------------|
+| `CANBridge-static.lib` | `CANBridge-cpp-<version>-windowsx86-64static.zip/windows/x86-64/static/CANBridge.lib` |
+| `CANBridge.lib`        | `CANBridge-cpp-<version>-windowsx86-64.zip/windows/x86-64/shared/CANBridge.lib`       |
+| `CANBridge.dll`        | `CANBridge-cpp-<version>-windowsx86-64.zip/windows/x86-64/shared/CANBridge.dll`       |
+
 
 ## Changelog
 
