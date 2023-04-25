@@ -52,7 +52,8 @@ TEST(CANMessageTest, SendAndReceive) {
 
     if (numDevices > 0) {
         std::cout << "Registering single device to HAL" << std::endl;
-        CANBridge_RegisterDeviceToHAL(CANBridge_GetDeviceDescriptor(handle, 0), 0, 0);
+        int status;
+        CANBridge_RegisterDeviceToHAL(CANBridge_GetDeviceDescriptor(handle, 0), 0, 0, &status);
         
         // auto device = handle->devices[0];
 
