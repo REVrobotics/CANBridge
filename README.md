@@ -32,8 +32,11 @@ cannot run the tests because they depend on having a USB CAN device connected.
 
 1. Bump the version number in `publish.gradle` and `CANBridge.json`
 2. Commit the version bump
-3. Create a new tag at that commit
+3. Create a new tag named `vX.X.X` at that commit
 4. Push the tag to GitHub
+5. Wait for the draft release to be created
+6. Add release notes to the draft release
+7. Publish the draft release
 
 ## Changelog
 
