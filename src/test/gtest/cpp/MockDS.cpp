@@ -13,7 +13,7 @@
 #include <wpi/Logger.h>
 #include <wpi/SmallString.h>
 #include <wpi/SmallVector.h>
-#include <wpi/UDPClient.h>
+#include <wpinet/UDPClient.h>
 #include <wpi/raw_ostream.h>
 
 #include <iostream>
@@ -28,16 +28,17 @@ static void LoggerFunc(unsigned int level, const char* file, unsigned int line,
     return;
   }
 
-  wpi::StringRef levelmsg;
+  oss << "DS: ";
+
   if (level >= 50)
-    levelmsg = "CRITICAL: ";
+    oss << "CRITICAL: ";
   else if (level >= 40)
-    levelmsg = "ERROR: ";
+    oss << "ERROR: ";
   else if (level >= 30)
-    levelmsg = "WARNING: ";
+    oss << "WARNING: ";
   else
     return;
-  oss << "DS: " << levelmsg << msg << " (" << file << ':' << line << ")\n";
+  oss << msg << " (" << file << ":" << std::to_string(line) << ")\n";
   wpi::errs() << oss.str();
 }
 
