@@ -1,0 +1,75 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '*'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            container: ''
+            name: windows64
+    name: "build-${{ matrix.name }}"
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 11
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .gradle
+            bin
+            build
+          key: ${{ matrix.name }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.name }}-build-
+
+      - name: Publish
+        run: |
+          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
+
+      # Put release files together in one directory
+      - name: Create Artifact
+        run: |
+          mkdir CANBridge-artifacts
+          cp -r build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
+          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
+          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+
+      # Upload build artifact
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: CANBridge-${{ github.sha }}
+          path: CANBridge-artifacts/
+
+      # Upload version.txt
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: version
+          path: build/allOutputs/version.txt
