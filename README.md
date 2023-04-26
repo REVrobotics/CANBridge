@@ -1,8 +1,8 @@
-# RoboRIO SDK Readme
+# CANBridge
 
 ## Overview
 
-This respository is for the CANBridge software that is run on non-roboRIO platforms. 
+This repository is for the CANBridge software that is run on non-roboRIO platforms.
 
 ## Build Requirements
 
@@ -15,16 +15,28 @@ All of these, excluding Git, can be installed and configured with the [WPILib In
 
 ## Building and Publishing
 
-Build and publish steps are done using the Gradle wrapper, `gradlew`. The Gradle wrapper is located in the root of the project, so Gradle commands must be run from there. 
+Building is done using the Gradle wrapper, `gradlew`. The Gradle wrapper is located in the root of the project, so Gradle commands must be run from there. 
 
 1. Clone this repository and open in VS Code
    - When VS Code first opens, select `Add workspace folder...` underneath `Start` on the Welcome Screen
 2. Open the VS Code terminal
    -  `View -> Terminal` or ``Ctrl+` ``
 3. Run `./gradlew build` from root
-4. Run `./gradlew publish` from root
 
-The output folders will be generated under `~\releases\maven\`.
+The output is placed at `~\releases\maven\release\com\revrobotics\usb\CANBridge-cpp\<version>\`.
+
+### Publishing a new version
+
+Before publishing a new version, run `./gradlew build` locally to run the tests. GitHub Actions
+cannot run the tests because they depend on having a USB CAN device connected.
+
+1. Bump the version number in `publish.gradle` and `CANBridge.json`
+2. Commit the version bump
+3. Create a new tag named `vX.X.X` at that commit
+4. Push the tag to GitHub
+5. Wait for the draft release to be created
+6. Add release notes to the draft release
+7. Publish the draft release
 
 ## Changelog
 
