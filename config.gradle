@@ -5,6 +5,7 @@ nativeUtils.withCrossLinuxArm64()
 nativeUtils {
   wpi {
     configureDependencies {
+      // When updating WPILib, be sure to also update wpiHalVersion.txt
       wpiVersion = "2023.+"
       niLibVersion = "2023.3.0"
       googleTestVersion = "1.11.0-3"

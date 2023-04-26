@@ -1,3 +1,4 @@
+// When updating WPILib, be sure to also update wpiHalVersion.txt
 plugins {
   id 'c'
   id 'cpp'
