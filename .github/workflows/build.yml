@@ -52,13 +52,22 @@ jobs:
         run: |
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
 
+      - name: Download WPILib HAL artifacts
+        run : |
+          halVersion=$(cat wpiHalVersion.txt)
+          halUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
+          curl -o windowsHal.zip "$halUrl"
+          unzip windowsHal.zip -d windowsHal
+
       # Put release files together in one directory
       - name: Create Artifact
         run: |
           mkdir CANBridge-artifacts
-          cp -r build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
-          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
-          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+          cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+          cp windowsHal/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
+          cp windowsHal/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
 
       # Upload build artifact
       - name: Upload build artifact
