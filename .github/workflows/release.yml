@@ -70,4 +70,5 @@ jobs:
         run: |
           VERSION=${{ needs.check-versions.outputs.version }}
           TAG=v$VERSION
+          ls -l CANBridge-${{ github.sha }}
           gh release create $TAG CANBridge-${{ github.sha }}/* --repo $GITHUB_REPOSITORY --draft --title "Version $VERSION"
