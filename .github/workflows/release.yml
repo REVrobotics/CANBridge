@@ -70,9 +70,4 @@ jobs:
         run: |
           VERSION=${{ needs.check-versions.outputs.version }}
           TAG=v$VERSION
-          gh release create $TAG --draft --title "Version $VERSION"
-          
-          echo "Sleep after creating release to avoid race condition"
-          sleep 5
-          
-          gh release upload $TAG CANBridge-${{ github.sha }}/*
+          gh release create $TAG CANBridge-${{ github.sha }}/* --repo $GITHUB_REPOSITORY --draft --title "Version $VERSION"
