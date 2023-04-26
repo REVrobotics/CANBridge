@@ -56,9 +56,9 @@ jobs:
       - name: Create Artifact
         run: |
           mkdir CANBridge-artifacts
-          cp -r build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
-          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
-          cp -r build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+          cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
 
       # Upload build artifact
       - name: Upload build artifact
