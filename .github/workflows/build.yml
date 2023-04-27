@@ -56,15 +56,18 @@ jobs:
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
-          # Download WPILib HAL artifacts from Artifactory 
+          # Download WPILib artifacts from Artifactory 
           halWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
+          utilWindowsUrl=utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
           curl -o halWindows.zip "$halWindowsUrl"
           curl -o halHeaders.zip "$halHeadersUrl"
+          curl -o utilWindows.zip "$utilWindowsUrl"
           curl -o utilHeaders.zip "$utilHeadersUrl"
           unzip halWindows.zip -d halWindows
           unzip halHeaders.zip -d halHeaders
+          unzip utilWindows.zip -d utilWindows
           unzip utilHeaders.zip -d utilHeaders
 
           # Gather all of the the needed headers
@@ -86,6 +89,8 @@ jobs:
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
           cp halWindows/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
           cp halWindows/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
+          cp utilWindows/windows/x86-64/shared/wpiutil.dll CANBridge-artifacts/wpiutil.dll
+          cp utilWindows/windows/x86-64/shared/wpiutil.lib CANBridge-artifacts/wpiutil.lib
 
       # Upload build artifact
       - name: Upload build artifact
