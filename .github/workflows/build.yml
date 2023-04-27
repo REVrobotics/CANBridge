@@ -64,10 +64,13 @@ jobs:
           curl -o wpilibSource.zip "$wpilibSourceZipUrl"
           # Extract just the HAL header files from the source code zip
           halIncludePathPrefix="allwpilib-$halVersion/hal/src/main/native/include"
+          utilIncludePathPrefix="allwpilib-$halVersion/wpiutil/src/main/native/include"
           unzip wpilibSource.zip "$halIncludePathPrefix/**.h" -d wpilibHalHeaders
+          unzip wpilibSource.zip "$utilIncludePathPrefix/**.h" -d wpilibUtilHeaders
           # Gather all of the the needed headers
           mkdir headers-for-artifact
           cp -r wpilibHalHeaders/"$halIncludePathPrefix"/hal headers-for-artifact
+          cp -r wpilibUtilHeaders/"$utilIncludePathPrefix"/wpi headers-for-artifact
           cp -r src/main/native/include/* headers-for-artifact
           # Zip the needed headers and put them in the appropriate location for artifact upload
           mkdir -p CANBridge-artifacts
