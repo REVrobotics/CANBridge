@@ -85,7 +85,7 @@ jobs:
         run: |
           mkdir -p CANBridge-artifacts
           cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
-          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.dll
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.dll CANBridge-artifacts/CANBridge.dll
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
           cp halWindows/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
           cp halWindows/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
