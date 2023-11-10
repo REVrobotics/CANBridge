@@ -91,7 +91,11 @@ CANStatus SerialDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint
     m_thread.ReceiveMessage(messages);
     std::shared_ptr<CANMessage> mostRecent;
     for (auto& m : messages) {
-        if (CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+        if (
+            CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first)
+            && CANBridge_ProcessMask({messageID, messageMask}, m.first)
+            && m.second->GetTimestampUs() > mostRecent->GetTimestampUs()
+        ) {
             mostRecent = m.second;
             status = CANStatus::kOk;    
         }
