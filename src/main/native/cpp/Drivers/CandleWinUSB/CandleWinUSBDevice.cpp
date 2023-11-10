@@ -140,7 +140,7 @@ CANStatus CandleWinUSBDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg
         if (
             CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first)
             && CANBridge_ProcessMask({messageID, messageMask}, m.first)
-            && m.second->GetTimestampUs() > mostRecent->GetTimestampUs()
+            && (!mostRecent || m.second->GetTimestampUs() > mostRecent->GetTimestampUs())
         ) {
             mostRecent = m.second;
             status = CANStatus::kOk;
