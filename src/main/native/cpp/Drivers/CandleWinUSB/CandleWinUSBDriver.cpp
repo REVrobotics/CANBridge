@@ -48,7 +48,11 @@ std::vector<CANDeviceDetail> CandleWinUSBDriver::GetDevices()
     candle_handle dev;
     std::vector<CANDeviceDetail> retval;
 
+    std::cout << "CandleWinUSBDriver.GetDevices()" << std::endl;
+
     if (candle_list_scan(&clist)) {
+        std::cout << "candle_list_scan() returned true" << std::endl;
+
         if (candle_list_length(clist, &num_interfaces)) {
             for (uint8_t i=0; i<num_interfaces; i++) {
                 if (candle_dev_get(clist, i, &dev)) {
@@ -59,6 +63,8 @@ std::vector<CANDeviceDetail> CandleWinUSBDriver::GetDevices()
             }
         }
         candle_list_free(clist);
+    } else {
+        std::cout << "candle_list_scan() returned false" << std::endl;
     }
 
     return retval;

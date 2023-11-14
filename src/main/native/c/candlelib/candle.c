@@ -126,12 +126,14 @@ bool __stdcall candle_list_scan(candle_list_handle *list)
 
     GUID guid;
     if (CLSIDFromString(L"{c15b4308-04d3-11e6-b3ea-6057189e6443}", &guid) != NOERROR) {
+		printf("CLSIDFromString() failed\n");
         l->last_error = CANDLE_ERR_CLSID;
         return false;
     }
 
     HDEVINFO hdi = SetupDiGetClassDevs(&guid, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (hdi == INVALID_HANDLE_VALUE) {
+    	printf("SetupDiGetClassDevs() failed\n");
         l->last_error = CANDLE_ERR_GET_DEVICES;
         return false;
     }
@@ -143,21 +145,29 @@ bool __stdcall candle_list_scan(candle_list_handle *list)
         interfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
         if (SetupDiEnumDeviceInterfaces(hdi, NULL, &guid, i, &interfaceData)) {
+        	printf("SetupDiEnumDeviceInterfaces(%d) returned a truthy value\n", i);
 
             if (!candle_read_di(hdi, interfaceData, &l->dev[i])) {
+            	printf("candle_read_di() failed\n");
+
                 l->last_error = l->dev[i].last_error;
                 rv = false;
                 break;
             }
 
         } else {
+        	printf("SetupDiEnumDeviceInterfaces(%d) returned a falsey value\n", i);
 
             DWORD err = GetLastError();
             if (err==ERROR_NO_MORE_ITEMS) {
+            	printf("Found all available devices\n");
+
                 l->num_devices = i;
                 l->last_error = CANDLE_ERR_OK;
                 rv = true;
             } else {
+            	printf("SetupDiEnumDeviceInterfaces(%d) failed\n", i);
+
                 l->last_error = CANDLE_ERR_SETUPDI_IF_ENUM;
                 rv = false;
             }
@@ -168,9 +178,13 @@ bool __stdcall candle_list_scan(candle_list_handle *list)
 		SP_DEVINFO_DATA devInfoData;
 		devInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 		if (SetupDiEnumDeviceInfo(hdi, i, &devInfoData)) {
+
+        	printf("SetupDiEnumDeviceInfo(%d) succeeded\n", i);
 			candle_read_device_name(hdi, &devInfoData, &l->dev[i]);
 		}
 		else {
+			printf("SetupDiEnumDeviceInfo(%d) failed. Device name is unknown.\n", i);
+
 			sprintf(l->dev[i].name, "Unknown");
 		}
 
