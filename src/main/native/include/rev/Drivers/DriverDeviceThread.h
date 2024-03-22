@@ -91,6 +91,7 @@ public:
 
         if(existing) {
             existing->m_intervalMs = timeIntervalMs;
+            existing->m_msg = msg;
         } else {
             m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
         }
