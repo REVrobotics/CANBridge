@@ -75,9 +75,25 @@ public:
         }
     }
 
+    detail::CANThreadSendQueueElement* findFirstMatchingId(int targetId) {
+        for (auto& element : m_sendQueue) {
+            if (element.m_msg.GetMessageId() == targetId) {
+                return &element;
+            }
+        }
+        return nullptr; // If no matching element found
+    }
+
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
-        m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+
+        detail::CANThreadSendQueueElement* existing = findFirstMatchingId(msg.GetMessageId());
+
+        if(existing) {
+            existing->m_intervalMs = timeIntervalMs;
+        } else {
+            m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+        }
 
         // TODO: Limit the max queue size
         return true;
