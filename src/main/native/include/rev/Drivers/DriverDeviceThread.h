@@ -75,9 +75,26 @@ public:
         }
     }
 
+    detail::CANThreadSendQueueElement* findFirstMatchingId(int targetId) {
+        for (auto& element : m_sendQueue) {
+            if (element.m_msg.GetMessageId() == targetId) {
+                return &element;
+            }
+        }
+        return nullptr; // If no matching element found
+    }
+
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
-        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+
+        detail::CANThreadSendQueueElement* existing = findFirstMatchingId(msg.GetMessageId());
+
+        if(existing) {
+            existing->m_intervalMs = timeIntervalMs;
+            existing->m_msg = msg;
+        } else {
+            m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+        }
 
         // TODO: Limit the max queue size
         return true;
@@ -169,7 +186,7 @@ protected:
     int m_statusErrCount = 0;
     CANStatus m_threadStatus = CANStatus::kOk;
 
-    std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
+    std::deque<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, std::shared_ptr<CANMessage>> m_readStore;
     std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_readStream; // (id, mask), max size, message buffer
 
@@ -200,7 +217,7 @@ protected:
                 for (size_t i=0;i<queueSize;i++) {
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
                     if (el.m_intervalMs == -1) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
                         continue;
                     }
 
@@ -208,12 +225,12 @@ protected:
 
                     // Don't pop queue if send fails
                     if (WriteMessages(el, now)) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
 
                         // Return to end of queue if repeated
                         if (el.m_intervalMs > 0 ) {
                             el.m_prevTimestamp = now;
-                            m_sendQueue.push(el);
+                            m_sendQueue.push_back(el);
                         }
                     } else {
                         // Wait a little bit before trying again
