@@ -203,9 +203,7 @@ private:
                 if (m_sendQueue.size() > 0) {
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
                     if (el.m_intervalMs == -1) {
-                        while(m_sendQueue.size() > 0) {
-                            m_sendQueue.pop_front();
-                        }
+                        removeElementsWithId(el.m_msg.GetMessageId());
                         continue;
                     }
 
