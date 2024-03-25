@@ -34,7 +34,10 @@ subsequent frames will be scheduled every 2 seconds. Note
 that any change to the data in the second call will not be
 sent, meaning the second call is essentially a no-op if a
 new call with different data is sent before the previous
-interval is up.
+interval is up. Sending a frame with an interval of -1
+will cancel the repeat, and not send the frame. Sending with
+an interval of 0 will schedule the new frame once, then stop
+repeating.
 
 ## Build Requirements
 
