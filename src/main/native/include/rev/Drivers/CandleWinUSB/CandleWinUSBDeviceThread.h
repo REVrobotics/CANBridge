@@ -90,8 +90,8 @@ public:
     void stopRepeatedMessage(uint32_t messageId) {
         for (int i = 0; i < m_sendQueue.size(); i++) {
             detail::CANThreadSendQueueElement el = m_sendQueue.front();
-            m_sendQueue.pop();
-            if (el.m_msg.GetMessageId() != messageId) m_sendQueue.push(el);
+            m_sendQueue.pop_front();
+            if (el.m_msg.GetMessageId() != messageId) m_sendQueue.push_back(el);
         }
     }
 
@@ -204,23 +204,23 @@ private:
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
                     if (el.m_intervalMs == -1) {
                         while(m_sendQueue.size() > 0) {
-                            m_sendQueue.pop();
+                            m_sendQueue.pop_front();
                         }
                         continue;
                     }
 
                     auto now = std::chrono::steady_clock::now();
 
-                    m_sendQueue.pop();
+                    m_sendQueue.pop_front();
                     if (WriteMessages(el, now)) {
 
                         // Return to end of queue if repeated
                         if (el.m_intervalMs > 0 ) {
                             el.m_prevTimestamp = now;
-                            m_sendQueue.push(el);
+                            m_sendQueue.push_back(el);
                         }
                     } else {
-                        m_sendQueue.push(el);
+                        m_sendQueue.push_back(el);
                     }
                 }
             }
