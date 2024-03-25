@@ -84,6 +84,10 @@ public:
         return nullptr; // If no matching element found
     }
 
+    void removeElementsWithId(int targetId) {
+        m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
+    }
+
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
 
