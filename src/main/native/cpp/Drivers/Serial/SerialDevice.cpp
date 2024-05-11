@@ -26,7 +26,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(_WIN32)
 
 #include "rev/Drivers/SerialPort/SerialDevice.h"
 
@@ -156,6 +155,4 @@ bool SerialDevice::IsConnected()
 } // namespace usb
 } // namespace rev
 
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32
+

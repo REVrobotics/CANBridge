@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(_WIN32)
+
 
 #include "rev/Drivers/SerialPort/SerialDriver.h"
 #include "rev/Drivers/SerialPort/SerialDevice.h"
@@ -81,7 +81,3 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* 
 
 } // namespace usb
 } // namespace rev
-
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32
