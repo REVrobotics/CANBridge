@@ -442,7 +442,7 @@ Serial::SerialImpl::reconfigurePort ()
 
   // activate settings
   ::tcsetattr (fd_, TCSANOW, &options);
-
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-float-conversion"
   // Update byte_time_ based on the new settings.
   uint32_t bit_time_ns = 1e9 / baudrate_;
   byte_time_ns_ = bit_time_ns * (1 + bytesize_ + parity_ + stopbits_);
@@ -452,6 +452,8 @@ Serial::SerialImpl::reconfigurePort ()
   if (stopbits_ == stopbits_one_point_five) {
     byte_time_ns_ += ((1.5 - stopbits_one_point_five) * bit_time_ns);
   }
+  #pragma GCC diagnostic ignored "-Wunused-result"
+  #pragma GCC diagnostic pop
 }
 
 void

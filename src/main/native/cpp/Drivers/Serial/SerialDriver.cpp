@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
+#if !defined(_WIN32)
 
 #include "rev/Drivers/SerialPort/SerialDriver.h"
 #include "rev/Drivers/SerialPort/SerialDevice.h"

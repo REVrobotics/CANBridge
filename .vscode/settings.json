@@ -70,5 +70,6 @@
         "cctype": "cpp",
         "concepts": "cpp"
     },
-    "C_Cpp.default.configurationProvider": "vscode-wpilib"
+    "C_Cpp.default.configurationProvider": "vscode-wpilib",
+    "C_Cpp.errorSquiggles": "enabled"
 }

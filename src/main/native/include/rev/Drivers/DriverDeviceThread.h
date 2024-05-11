@@ -52,7 +52,9 @@
 
 namespace rev {
 namespace usb {
-
+#pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wreorder"
 class DriverDeviceThread {
 public:
     /**
