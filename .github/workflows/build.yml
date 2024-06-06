@@ -22,6 +22,15 @@ jobs:
           - os: windows-latest
             container: ''
             name: windows64
+          - os: ubuntu-latest
+            container: ''
+            name: linux64
+          - os: macos-latest
+            container: ''
+            name: macosarm64
+          - os: macos-13
+            container: ''
+            name: macosintel64
     name: "build-${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -58,16 +67,28 @@ jobs:
           
           # Download WPILib artifacts from Artifactory 
           halWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
+          halLinuxUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
+          halMacUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
           utilWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
+          utilLinuxUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
+          utilMacUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
           curl -o halWindows.zip "$halWindowsUrl"
+          curl -o halLinux.zip "$halLinuxUrl"
+          curl -o halMac.zip "$halMacUrl"
           curl -o halHeaders.zip "$halHeadersUrl"
           curl -o utilWindows.zip "$utilWindowsUrl"
+          curl -o utilLinux.zip "$utilLinuxUrl"
+          curl -o utilMac.zip "$utilMacUrl"
           curl -o utilHeaders.zip "$utilHeadersUrl"
           unzip halWindows.zip -d halWindows
+          unzip halLinux.zip -d halLinux
+          unzip halMac.zip -d halMac
           unzip halHeaders.zip -d halHeaders
           unzip utilWindows.zip -d utilWindows
+          unzip utilLinux.zip -d utilLinux
+          unzip utilMac.zip -d utilMac
           unzip utilHeaders.zip -d utilHeaders
 
           # Gather all of the the needed headers
