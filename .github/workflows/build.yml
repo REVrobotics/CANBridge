@@ -22,6 +22,18 @@ jobs:
           - os: windows-latest
             container: ''
             name: windows64
+          - os: ubuntu-latest
+            container: ''
+            name: linux64
+#          - os: ubuntu-latest-arm64
+#            container: ''
+#            name: linuxarm64
+          - os: macos-latest
+            container: ''
+            name: macosarm64
+          - os: macos-13
+            container: ''
+            name: macosintel64
     name: "build-${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -53,21 +65,45 @@ jobs:
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
 
       - name: Download WPILib HAL artifacts and headers, gather all needed headers
+        if: contains(matrix.name, 'windows64')
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
           # Download WPILib artifacts from Artifactory 
           halWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
+          halMacUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-osxuniversal.zip
+          halLinux64Url=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-linuxx86-64.zip
+          halLinuxArmUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-linuxarm64.zip
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
+
           utilWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
+          utilMacUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-osxuniversal.zip
+          utilLinux64Url=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-linuxx86-64.zip
+          utilLinuxArmUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-linuxarm64.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
+
           curl -o halWindows.zip "$halWindowsUrl"
+          curl -o halMac.zip "$halMacUrl"
+          curl -o halLinux64.zip "$halLinux64Url"
+          curl -o halLinuxArm.zip "$halLinuxArmUrl"
           curl -o halHeaders.zip "$halHeadersUrl"
+
           curl -o utilWindows.zip "$utilWindowsUrl"
+          curl -o utilMac.zip "$utilMacUrl"
+          curl -o utilLinux64.zip "$utilLinux64Url"
+          curl -o utilLinuxArm.zip "$utilLinuxArmUrl"
           curl -o utilHeaders.zip "$utilHeadersUrl"
+
           unzip halWindows.zip -d halWindows
+          unzip halMac.zip -d halMac
+          unzip halLinux64.zip -d halLinux64
+          unzip halLinuxArm.zip -d halLinuxArm
           unzip halHeaders.zip -d halHeaders
+
           unzip utilWindows.zip -d utilWindows
+          unzip utilMac.zip -d utilMac
+          unzip utilLinux64.zip -d utilLinux64
+          unzip utilLinuxArm.zip -d utilLinuxArm
           unzip utilHeaders.zip -d utilHeaders
 
           # Gather all of the the needed headers
@@ -81,16 +117,53 @@ jobs:
           7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
       # Put release files together in one directory
-      - name: Create Artifact
+      - name: Create Artifact (windows64)
+        if: contains(matrix.name, 'windows64')
         run: |
           mkdir -p CANBridge-artifacts
           cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.dll CANBridge-artifacts/CANBridge.dll
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+
           cp halWindows/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
           cp halWindows/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
+          cp halMac/osx/universal/shared/libwpiHal.dylib CANBridge-artifacts/libwpiHal.dylib
+          cp halLinux64/linux/x86-64/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
+          cp halLinuxArm/linux/arm64/shared/libwpiHal.so CANBridge-artifacts/libwpiHal-arm64.so
+
           cp utilWindows/windows/x86-64/shared/wpiutil.dll CANBridge-artifacts/wpiutil.dll
           cp utilWindows/windows/x86-64/shared/wpiutil.lib CANBridge-artifacts/wpiutil.lib
+          cp utilMac/osx/universal/shared/libwpiutil.dylib CANBridge-artifacts/libwpiutil.dylib
+          cp utilLinux64/linux/x86-64/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
+          cp utilLinuxArm/linux/arm64/shared/libwpiutil.so CANBridge-artifacts/libwpiutil-arm64.so
+
+      # Put release files together in one directory
+      - name: Create Artifact (linux64)
+        if: contains(matrix.name, 'linux64')
+        run: |
+          mkdir -p CANBridge-artifacts
+          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+
+      # Put release files together in one directory
+      - name: Create Artifact (linuxarm64)
+        if: contains(matrix.name, 'linuxarm64')
+        run: |
+          mkdir -p CANBridge-artifacts
+          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+
+      # Put release files together in one directory
+      - name: Create Artifact (macosarm64)
+        if: contains(matrix.name, 'macosarm64')
+        run: |
+          mkdir -p CANBridge-artifacts
+          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+
+      # Put release files together in one directory
+      - name: Create Artifact (macosintel64)
+        if: contains(matrix.name, 'macosintel64')
+        run: |
+          mkdir -p CANBridge-artifacts
+          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
 
       # Upload build artifact
       - name: Upload build artifact

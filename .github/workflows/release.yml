@@ -16,13 +16,43 @@ jobs:
       TAG_NAME: ${{ env.TAG_NAME }}
       VERSION: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Wait for build to finish
-        uses: lewagon/wait-on-check-action@v1.3.1
+
+      - name: Wait for windows64 build to finish
+        uses: lewagon/wait-on-check-action@v1.3.1 
         with:
           ref: ${{ github.ref }}
           check-name: 'build-windows64'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
+      - name: Wait for linux64 build to finish
+        uses: lewagon/wait-on-check-action@v1.3.1 
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'build-linux64'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+#      - name: Wait for linuxarm64 build to finish
+#        uses: lewagon/wait-on-check-action@v1.3.1 
+#        with:
+#          ref: ${{ github.ref }}
+#          check-name: 'build-linuxarm64'
+#          repo-token: ${{ secrets.GITHUB_TOKEN }}
+#          wait-interval: 10
+      - name: Wait for macosarm64 build to finish
+        uses: lewagon/wait-on-check-action@v1.3.1 
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'build-macosarm64'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+      - name: Wait for macosintel64 build to finish
+        uses: lewagon/wait-on-check-action@v1.3.1 
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'build-macosintel64'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
       - name: Get tag name
         run: |
           echo "TAG_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
