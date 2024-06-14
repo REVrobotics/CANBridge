@@ -65,7 +65,7 @@ jobs:
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
 
       - name: Download WPILib HAL artifacts and headers, gather all needed headers
-        if: contains(matrix.name, 'windows64')
+        # if: contains(matrix.name, 'windows64')
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
@@ -156,7 +156,12 @@ jobs:
         if: contains(matrix.name, 'macosarm64')
         run: |
           mkdir -p CANBridge-artifacts
-          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+          cp build/libs/cANBridge/static/osxuniversal/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
+          cp build/libs/cANBridge/shard/osxuniversal/release/libCANBridge.dylib CANBridge-artifacts/libCANBridge.dylib
+
+          cp halMac/osx/universal/shared/libwpiHal.dylib CANBridge-artifacts/libwpiHal.dylib
+
+          cp utilMac/osx/universal/shared/libwpiutil.dylib CANBridge-artifacts/libwpiutil.dylib
 
       # Put release files together in one directory
       - name: Create Artifact (macosintel64)
