@@ -157,7 +157,7 @@ jobs:
         run: |
           mkdir -p CANBridge-artifacts
           cp build/libs/cANBridge/static/osxuniversal/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
-          cp build/libs/cANBridge/shard/osxuniversal/release/libCANBridge.dylib CANBridge-artifacts/libCANBridge.dylib
+          cp build/libs/cANBridge/shared/osxuniversal/release/libCANBridge.dylib CANBridge-artifacts/libCANBridge.dylib
 
           cp halMac/osx/universal/shared/libwpiHal.dylib CANBridge-artifacts/libwpiHal.dylib
 
