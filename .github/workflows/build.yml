@@ -13,7 +13,95 @@ defaults:
     shell: bash
 
 jobs:
-  build:
+  build-docker:
+    strategy:
+      matrix:
+        include:
+          - container: wpilib/aarch64-cross-ubuntu:bullseye-22.04
+            name: LinuxARM64
+            build-options: "-Ponlylinuxarm64"
+            platform-type: linuxarm64
+          - container: wpilib/raspbian-cross-ubuntu:bullseye-22.04
+            name: LinuxARM32
+            build-options: "-Ponlylinuxarm32"
+            platform-type: linuxarm32
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 11
+      - name: Build
+        run: |
+          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
+      - name: Download WPILib HAL artifacts and headers, gather all needed headers
+        run : |
+          halVersion=$(cat wpiHalVersion.txt)
+          
+          # Download WPILib artifacts from Artifactory 
+          halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
+          halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
+
+          utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
+          utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
+
+          curl -o halPlatform.zip "$halPlatformUrl"
+          curl -o halHeaders.zip "$halHeadersUrl"
+
+          curl -o utilPlatform.zip "$utilPlatformUrl"
+          curl -o utilHeaders.zip "$utilHeadersUrl"
+
+          unzip halPlatform.zip -d halPlatform
+          unzip halHeaders.zip -d halHeaders
+
+          unzip utilPlatform.zip -d utilPlatform
+          unzip utilHeaders.zip -d utilHeaders
+
+          # Gather all of the the needed headers
+          mkdir headers-for-artifact
+          cp -r halHeaders/hal headers-for-artifact
+          cp -r utilHeaders/wpi headers-for-artifact
+          cp -r src/main/native/include/* headers-for-artifact
+
+          # Zip the needed headers and put them in the appropriate location for artifact upload
+          mkdir -p CANBridge-artifacts
+          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
+
+      # Put Linux ARM release files together in one directory
+      - name: Create Artifact (linuxarm64)
+        if: matrix.platform-type == 'linuxarm64'
+        run: |
+          cp build/libs/cANBridge/static/linuxarm64/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
+          cp build/libs/cANBridge/shared/linuxarm64/release/libCANBridge.so CANBridge-artifacts/libCANBridge.so
+
+          cp halPlatform/linux/arm64/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
+
+          cp utilPlatform/linux/arm64/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
+
+      # Put Linux ARM release files together in one directory
+      - name: Create Artifact (linuxarm32)
+        if: matrix.platform-type == 'linuxarm32'
+        run: |
+          cp build/libs/cANBridge/static/linuxarm32/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
+          cp build/libs/cANBridge/shared/linuxarm32/release/libCANBridge.so CANBridge-artifacts/libCANBridge.so
+
+          cp halPlatform/linux/arm32/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
+
+          cp utilPlatform/linux/arm32/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
+
+      # Upload build artifact
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: CANBridge-${{ github.sha }}-${{ matrix.platform-type }}-${{ matrix.name }}
+          path: CANBridge-artifacts/
+  build-native:
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -27,10 +115,6 @@ jobs:
             container: ''
             name: Linux64
             platform-type: linuxx86-64
-          # - os: ubuntu-latest-arm64
-          #   container: ''
-          #   name: linuxarm64
-          #   platform-type: linuxarm64
           - os: macos-latest
             container: ''
             name: MacOSARM64
@@ -120,13 +204,12 @@ jobs:
       - name: Create Artifact (linux64)
         if: matrix.platform-type == 'linuxx86-64'
         run: |
-          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+          cp build/libs/cANBridge/static/linuxx86-64/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
+          cp build/libs/cANBridge/shared/linuxx86-64/release/libCANBridge.so CANBridge-artifacts/libCANBridge.so
 
-      # Put Linux ARM release files together in one directory
-      - name: Create Artifact (linuxarm64)
-        if: matrix.platform-type == 'linuxarm64'
-        run: |
-          # TODO: Include built binaries for macos/arm64, macos/x86-64, linux/x86-64, linux/arm64
+          cp halPlatform/linux/x86-64/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
+
+          cp utilPlatform/linux/x86-64/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
 
       # Put macOS release files together in one directory
       - name: Create Artifact (osxuniversal)
@@ -145,10 +228,3 @@ jobs:
         with:
           name: CANBridge-${{ github.sha }}-${{ matrix.platform-type }}-${{ matrix.name }}
           path: CANBridge-artifacts/
-
-      # Upload version.txt
-      - name: Upload version artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: version
-          path: build/allOutputs/version.txt
