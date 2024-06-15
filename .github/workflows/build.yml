@@ -26,6 +26,7 @@ jobs:
             build-options: "-Ponlylinuxarm32"
             platform-type: linuxarm32
     runs-on: ubuntu-latest
+    name: "Build - ${{ matrix.name }}"
     container: ${{ matrix.container }}
     steps:
       - name: Checkout
