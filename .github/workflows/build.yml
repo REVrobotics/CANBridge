@@ -15,6 +15,7 @@ defaults:
 jobs:
   build-docker:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - container: wpilib/aarch64-cross-ubuntu:bullseye-22.04
@@ -72,6 +73,8 @@ jobs:
 
           # Zip the needed headers and put them in the appropriate location for artifact upload
           mkdir -p CANBridge-artifacts
+          # Install 7zip
+          sudo apt install -y p7zip-full
           7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
       # Put Linux ARM release files together in one directory
