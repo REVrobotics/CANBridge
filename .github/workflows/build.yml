@@ -41,7 +41,7 @@ jobs:
           java-version: 11
       - name: Build
         run: |
-          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
+          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode --info
       - name: Install 7zip
         run: |
           sudo apt-get update
