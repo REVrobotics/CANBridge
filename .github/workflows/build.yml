@@ -42,6 +42,10 @@ jobs:
       - name: Build
         run: |
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
+      - name: Install 7zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
       - name: Download WPILib HAL artifacts and headers, gather all needed headers
         run : |
           halVersion=$(cat wpiHalVersion.txt)
@@ -73,8 +77,6 @@ jobs:
 
           # Zip the needed headers and put them in the appropriate location for artifact upload
           mkdir -p CANBridge-artifacts
-          # Install 7zip
-          sudo apt install -y p7zip-full
           7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
       # Put Linux ARM release files together in one directory
