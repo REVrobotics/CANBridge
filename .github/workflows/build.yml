@@ -36,11 +36,13 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.sha }}
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: 11
+
       - name: Build
         run: |
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
@@ -48,36 +50,37 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
-      - name: Download WPILib HAL artifacts and headers, gather all needed headers
+
+      - name: Download WPILib HAL artifacts and headers for ${{ matrix.platform-type }}
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
-          # Download WPILib artifacts from Artifactory 
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
-
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
 
           curl -o halPlatform.zip "$halPlatformUrl"
           curl -o halHeaders.zip "$halHeadersUrl"
-
           curl -o utilPlatform.zip "$utilPlatformUrl"
           curl -o utilHeaders.zip "$utilHeadersUrl"
 
+      - name: Unzip WPILib HAL artifacts and headers
+        run: |
           unzip halPlatform.zip -d halPlatform
           unzip halHeaders.zip -d halHeaders
-
           unzip utilPlatform.zip -d utilPlatform
           unzip utilHeaders.zip -d utilHeaders
 
-          # Gather all of the the needed headers
+      - name: Gather all needed headers
+        run: |
           mkdir headers-for-artifact
           cp -r halHeaders/hal headers-for-artifact
           cp -r utilHeaders/wpi headers-for-artifact
           cp -r src/main/native/include/* headers-for-artifact
 
-          # Zip the needed headers and put them in the appropriate location for artifact upload
+      - name: Zip the needed headers and put them in the appropriate location for artifact upload
+        run: |
           mkdir -p CANBridge-artifacts
           7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
@@ -86,9 +89,7 @@ jobs:
         run: |
           cp build/libs/cANBridge/static/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
           cp build/libs/cANBridge/shared/release/libCANBridge.so CANBridge-artifacts/libCANBridge.so
-
           cp halPlatform/linux/${{ matrix.arch }}/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
-
           cp utilPlatform/linux/${{ matrix.arch }}/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
 
       # Upload build artifact
@@ -97,6 +98,7 @@ jobs:
         with:
           name: CANBridge-${{ github.sha }}-${{ matrix.platform-type }}-${{ matrix.name }}
           path: CANBridge-artifacts/
+
   build-native:
     timeout-minutes: 15
     strategy:
@@ -111,6 +113,8 @@ jobs:
             container: ''
             name: Linux64
             platform-type: linuxx86-64
+          # GitHub hosted runner `macos-latest` is arm64, which is why we need to specify `macos-13` for x86_64
+          # See https://github.com/actions/runner-images?tab=readme-ov-file#available-images for more information
           - os: macos-latest
             container: ''
             name: MacOSARM64
@@ -149,36 +153,36 @@ jobs:
         run: |
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
 
-      - name: Download WPILib HAL artifacts and headers, gather all needed headers
+      - name: Download WPILib HAL artifacts and headers for ${{ matrix.platform-type }}
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
-          # Download WPILib artifacts from Artifactory 
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
-
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
 
           curl -o halPlatform.zip "$halPlatformUrl"
           curl -o halHeaders.zip "$halHeadersUrl"
-
           curl -o utilPlatform.zip "$utilPlatformUrl"
           curl -o utilHeaders.zip "$utilHeadersUrl"
 
+      - name: Unzip WPILib HAL artifacts and headers
+        run: |
           unzip halPlatform.zip -d halPlatform
           unzip halHeaders.zip -d halHeaders
-
           unzip utilPlatform.zip -d utilPlatform
           unzip utilHeaders.zip -d utilHeaders
 
-          # Gather all of the the needed headers
+      - name: Gather all needed headers
+        run: |
           mkdir headers-for-artifact
           cp -r halHeaders/hal headers-for-artifact
           cp -r utilHeaders/wpi headers-for-artifact
           cp -r src/main/native/include/* headers-for-artifact
 
-          # Zip the needed headers and put them in the appropriate location for artifact upload
+      - name: Zip the needed headers and put them in the appropriate location for artifact upload
+        run: |
           mkdir -p CANBridge-artifacts
           7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
@@ -189,10 +193,8 @@ jobs:
           cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.dll CANBridge-artifacts/CANBridge.dll
           cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
-
           cp halPlatform/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
           cp halPlatform/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
-
           cp utilPlatform/windows/x86-64/shared/wpiutil.dll CANBridge-artifacts/wpiutil.dll
           cp utilPlatform/windows/x86-64/shared/wpiutil.lib CANBridge-artifacts/wpiutil.lib
 
@@ -202,9 +204,7 @@ jobs:
         run: |
           cp build/libs/cANBridge/static/linuxx86-64/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
           cp build/libs/cANBridge/shared/linuxx86-64/release/libCANBridge.so CANBridge-artifacts/libCANBridge.so
-
           cp halPlatform/linux/x86-64/shared/libwpiHal.so CANBridge-artifacts/libwpiHal.so
-
           cp utilPlatform/linux/x86-64/shared/libwpiutil.so CANBridge-artifacts/libwpiutil.so
 
       # Put macOS release files together in one directory
@@ -213,9 +213,7 @@ jobs:
         run: |
           cp build/libs/cANBridge/static/osxuniversal/release/libCANBridge.a CANBridge-artifacts/libCANBridge.a
           cp build/libs/cANBridge/shared/osxuniversal/release/libCANBridge.dylib CANBridge-artifacts/libCANBridge.dylib
-
           cp halPlatform/osx/universal/shared/libwpiHal.dylib CANBridge-artifacts/libwpiHal.dylib
-
           cp utilPlatform/osx/universal/shared/libwpiutil.dylib CANBridge-artifacts/libwpiutil.dylib
 
       # Upload build artifact
