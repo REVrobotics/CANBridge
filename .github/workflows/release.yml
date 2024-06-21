@@ -5,6 +5,9 @@ on:
     tags:
       - 'v**'
 
+permissions:
+  contents: write
+
 defaults:
   run:
     shell: bash
@@ -21,6 +24,7 @@ jobs:
         with:
           ref: ${{ github.ref }}
           running-workflow-name: "Build"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
       # Download artifacts from build workflow
