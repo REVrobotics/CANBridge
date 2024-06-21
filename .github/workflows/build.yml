@@ -220,5 +220,5 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CANBridge-${{ github.sha }}-${{ matrix.platform-type }}-${{ matrix.name }}
+          name: CANBridge-${{ matrix.platform-type }}-${{ matrix.name }}
           path: CANBridge-artifacts/

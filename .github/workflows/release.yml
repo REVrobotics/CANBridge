@@ -55,6 +55,7 @@ jobs:
           workflow: build.yml
           commit: ${{ github.sha }}
           path: '.'
+          skip_unpack: true
 
       # This step is to check what files are downloaded and how they are structured, as well as binary sizes for releases
       - name: List files
