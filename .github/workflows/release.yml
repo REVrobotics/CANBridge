@@ -23,10 +23,6 @@ jobs:
           running-workflow-name: "Build"
           wait-interval: 10
 
-      - name: Get tag name
-        run: |
-          echo "TAG_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
       # Download artifacts from build workflow
       - name: Download workflow artifacts
         uses: dawidd6/action-download-artifact@v6
