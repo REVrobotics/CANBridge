@@ -46,43 +46,21 @@ jobs:
       - name: Build
         run: |
           ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
-      - name: Install 7zip
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y p7zip-full
 
       - name: Download WPILib HAL artifacts and headers for ${{ matrix.platform-type }}
         run : |
           halVersion=$(cat wpiHalVersion.txt)
           
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
 
           curl -o halPlatform.zip "$halPlatformUrl"
-          curl -o halHeaders.zip "$halHeadersUrl"
           curl -o utilPlatform.zip "$utilPlatformUrl"
-          curl -o utilHeaders.zip "$utilHeadersUrl"
 
       - name: Unzip WPILib HAL artifacts and headers
         run: |
           unzip halPlatform.zip -d halPlatform
-          unzip halHeaders.zip -d halHeaders
           unzip utilPlatform.zip -d utilPlatform
-          unzip utilHeaders.zip -d utilHeaders
-
-      - name: Gather all needed headers
-        run: |
-          mkdir headers-for-artifact
-          cp -r halHeaders/hal headers-for-artifact
-          cp -r utilHeaders/wpi headers-for-artifact
-          cp -r src/main/native/include/* headers-for-artifact
-
-      - name: Zip the needed headers and put them in the appropriate location for artifact upload
-        run: |
-          mkdir -p CANBridge-artifacts
-          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
       # Put Linux ARM release files together in one directory
       - name: Create Artifact
@@ -158,33 +136,15 @@ jobs:
           halVersion=$(cat wpiHalVersion.txt)
           
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
 
           curl -o halPlatform.zip "$halPlatformUrl"
-          curl -o halHeaders.zip "$halHeadersUrl"
           curl -o utilPlatform.zip "$utilPlatformUrl"
-          curl -o utilHeaders.zip "$utilHeadersUrl"
 
       - name: Unzip WPILib HAL artifacts and headers
         run: |
           unzip halPlatform.zip -d halPlatform
-          unzip halHeaders.zip -d halHeaders
           unzip utilPlatform.zip -d utilPlatform
-          unzip utilHeaders.zip -d utilHeaders
-
-      - name: Gather all needed headers
-        run: |
-          mkdir headers-for-artifact
-          cp -r halHeaders/hal headers-for-artifact
-          cp -r utilHeaders/wpi headers-for-artifact
-          cp -r src/main/native/include/* headers-for-artifact
-
-      - name: Zip the needed headers and put them in the appropriate location for artifact upload
-        run: |
-          mkdir -p CANBridge-artifacts
-          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
 
       # Put Windows release files together in one directory
       - name: Create Artifact (windows64)
@@ -222,3 +182,45 @@ jobs:
         with:
           name: CANBridge-${{ matrix.platform-type }}-${{ matrix.name }}
           path: CANBridge-artifacts/
+
+  wpi-headers:
+    runs-on: ubuntu-latest
+    name: "WPILib Headers"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Download WPILib HAL artifacts and headers for linuxx86-64
+        run : |
+          halVersion=$(cat wpiHalVersion.txt)
+
+          halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
+          utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
+
+          curl -o halHeaders.zip "$halHeadersUrl"
+          curl -o utilHeaders.zip "$utilHeadersUrl"
+
+      - name: Unzip WPILib HAL artifacts and headers
+        run: |
+          unzip halHeaders.zip -d halHeaders
+          unzip utilHeaders.zip -d utilHeaders
+
+      - name: Gather all needed headers
+        run: |
+          mkdir headers-for-artifact
+          cp -r halHeaders/hal headers-for-artifact
+          cp -r utilHeaders/wpi headers-for-artifact
+          cp -r src/main/native/include headers-for-artifact
+
+      - name: Zip the needed headers and put them in the appropriate location for artifact upload
+        run: |
+          mkdir -p CANBridge-artifacts
+          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
+
+      # Upload build artifact
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: CANBridge-artifacts/headers.zip
+          name: headers
