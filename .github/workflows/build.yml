@@ -145,6 +145,7 @@ jobs:
         run: |
           unzip halPlatform.zip -d halPlatform
           unzip utilPlatform.zip -d utilPlatform
+          mkdir -p CANBridge-artifacts
 
       # Put Windows release files together in one directory
       - name: Create Artifact (windows64)
