@@ -87,21 +87,18 @@ jobs:
           - os: windows-latest
             container: ''
             name: Win64
+            build-options: ""
             platform-type: windowsx86-64
           - os: ubuntu-latest
             container: ''
             name: Linux64
             platform-type: linuxx86-64
-          # GitHub hosted runner `macos-latest` is arm64, which is why we need to specify `macos-13` for x86_64
-          # See https://github.com/actions/runner-images?tab=readme-ov-file#available-images for more information
+            build-options: ""
           - os: macos-latest
             container: ''
-            name: MacOSARM64
+            name: macOS
             platform-type: osxuniversal
-          - os: macos-13
-            container: ''
-            name: MacOS64
-            platform-type: osxuniversal
+            build-options: ""
     name: "Build - ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
