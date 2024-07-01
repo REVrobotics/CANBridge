@@ -102,7 +102,17 @@ int parse_serial_com_port(const std::string& in) {
     if(!in.empty() && (substr_break < in.length())) {
         std::string num = in.substr(substr_break, in.length());
         if (!num.empty()) {
-            return std::stoi(num);
+            int returnval = -1;
+            try
+            {
+                returnval = std::stoi(num);
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << 'parse_serial_com_port: Error running stoi: ' << e.what() << '\n';
+            }
+            
+            return returnval;
         }
     }
 
