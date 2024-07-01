@@ -210,7 +210,7 @@ jobs:
           mkdir headers-for-artifact
           cp -r halHeaders/hal headers-for-artifact
           cp -r utilHeaders/wpi headers-for-artifact
-          cp -r src/main/native/include headers-for-artifact
+          cp -r src/main/native/include/* headers-for-artifact
 
       # Upload build artifact
       - name: Upload build artifact
