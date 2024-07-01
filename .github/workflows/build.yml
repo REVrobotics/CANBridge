@@ -212,14 +212,9 @@ jobs:
           cp -r utilHeaders/wpi headers-for-artifact
           cp -r src/main/native/include headers-for-artifact
 
-      - name: Zip the needed headers and put them in the appropriate location for artifact upload
-        run: |
-          mkdir -p CANBridge-artifacts
-          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
-
       # Upload build artifact
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          path: CANBridge-artifacts/headers.zip
+          path: headers-for-artifact
           name: headers
