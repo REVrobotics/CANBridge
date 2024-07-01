@@ -1,7 +1,7 @@
 {
     "fileName": "CANBridge.json",
     "name": "CANBridge",
-    "version": "2.3.7",
+    "version": "2.3.8",
     "uuid": "34b37c7c-8acc-405f-9631-d21f20dc59d8",
     "mavenUrls": [
         "http://www.revrobotics.com/content/sw/max/sdk/maven/"
