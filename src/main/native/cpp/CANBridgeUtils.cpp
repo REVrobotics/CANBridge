@@ -109,7 +109,7 @@ int parse_serial_com_port(const std::string& in) {
             }
             catch(const std::exception& e)
             {
-                std::cerr << 'parse_serial_com_port: Error running stoi: ' << e.what() << '\n';
+                std::cerr << "parse_serial_com_port: Error running stoi: " << e.what() << '\n';
             }
             
             return returnval;
