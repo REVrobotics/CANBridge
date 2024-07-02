@@ -75,7 +75,9 @@
 			"list": "cpp",
 			"set": "cpp",
 			"unordered_map": "cpp",
-			"xhash": "cpp"
+			"xhash": "cpp",
+			"stdlib.h": "c",
+			"candle.h": "c"
 		},
 		"java.configuration.updateBuildConfiguration": "disabled"
 	}

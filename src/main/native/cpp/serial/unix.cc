@@ -452,6 +452,7 @@ Serial::SerialImpl::reconfigurePort ()
   if (stopbits_ == stopbits_one_point_five) {
     byte_time_ns_ += ((1.5 - stopbits_one_point_five) * bit_time_ns);
   }
+
 }
 
 void
