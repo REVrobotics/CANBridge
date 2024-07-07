@@ -26,14 +26,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
 
 #include "rev/Drivers/SerialPort/SerialDevice.h"
 
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #include "serial/serial.h"
@@ -91,7 +90,11 @@ CANStatus SerialDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint
     m_thread.ReceiveMessage(messages);
     std::shared_ptr<CANMessage> mostRecent;
     for (auto& m : messages) {
-        if (CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+        if (
+            CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first)
+            && CANBridge_ProcessMask({messageID, messageMask}, m.first)
+            && (!mostRecent || m.second->GetTimestampUs() > mostRecent->GetTimestampUs())
+        ) {
             mostRecent = m.second;
             status = CANStatus::kOk;    
         }
@@ -139,6 +142,10 @@ CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_
     return m_thread.GetLastThreadError();
 }
 
+CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) {
+    return GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
+}
+
 bool SerialDevice::IsConnected()
 {
     return true;
@@ -148,6 +155,4 @@ bool SerialDevice::IsConnected()
 } // namespace usb
 } // namespace rev
 
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32
+

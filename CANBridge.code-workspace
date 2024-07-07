@@ -68,7 +68,16 @@
 			"fstream": "cpp",
 			"sstream": "cpp",
 			"iomanip": "cpp",
-			"candle_defs.h": "c"
+			"candle_defs.h": "c",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"functional": "cpp",
+			"list": "cpp",
+			"set": "cpp",
+			"unordered_map": "cpp",
+			"xhash": "cpp",
+			"stdlib.h": "c",
+			"candle.h": "c"
 		},
 		"java.configuration.updateBuildConfiguration": "disabled"
 	}
