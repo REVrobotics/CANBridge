@@ -87,6 +87,84 @@ std::unique_ptr<CANDevice> SocketCANDriver::CreateDeviceFromDescriptor(const cha
     return std::unique_ptr<CANDevice>(nullptr);
 }
 
+SocketCANDevice::SocketCANDevice(const char* port) {
+    // Constructor implementation
+}
+
+SocketCANDevice::~SocketCANDevice() {
+    // Destructor implementation
+}
+
+std::string SocketCANDevice::GetName() const {
+    // Implementation
+    return "Name";
+}
+
+std::string SocketCANDevice::GetDescriptor() const {
+    // Implementation
+    return "Descriptor";
+}
+
+int SocketCANDevice::GetNumberOfErrors() {
+    // Implementation
+    return 0;
+}
+
+int SocketCANDevice::GetId() const {
+    // Implementation
+    return 0;
+}
+
+CANStatus SocketCANDevice::SendCANMessage(const CANMessage& msg, int periodMs) {
+    // Implementation
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) {
+    // Implementation
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) {
+    // Implementation
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::CloseStreamSession(uint32_t sessionHandle) {
+    // Implementation
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) {
+    // Implementation
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) {
+    // Implementation
+    *percentBusUtilization = 0.0f;
+    *busOff = 0;
+    *txFull = 0;
+    *receiveErr = 0;
+    *transmitErr = 0;
+    return CANStatus::kOk;
+}
+
+CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) {
+    // Implementation
+    *percentBusUtilization = 0.0f;
+    *busOff = 0;
+    *txFull = 0;
+    *receiveErr = 0;
+    *transmitErr = 0;
+    *lastErrorTime = 0;
+    return CANStatus::kOk;
+}
+
+bool SocketCANDevice::IsConnected() {
+    // Implementation
+    return true;
+}
 } // namespace usb
 } // namespace rev
 
