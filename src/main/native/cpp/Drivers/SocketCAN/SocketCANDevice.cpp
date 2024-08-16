@@ -83,7 +83,6 @@ CANStatus SocketCANDevice::CloseStreamSession(uint32_t sessionHandle) {
     m_thread.CloseStream(sessionHandle);
     return m_thread.GetLastThreadError();
 }
-}
 
 CANStatus SocketCANDevice::ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);

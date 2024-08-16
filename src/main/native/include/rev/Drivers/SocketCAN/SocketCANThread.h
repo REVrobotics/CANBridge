@@ -52,7 +52,7 @@
 
 #include "candlelib/candle.h"
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 namespace rev {
