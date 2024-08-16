@@ -62,7 +62,7 @@ namespace usb {
 class SocketCANDeviceThread :public DriverDeviceThread { 
 public:
     SocketCANDeviceThread() =delete;
-    SocketCANDeviceThread(const char* port, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs)
+    SocketCANDeviceThread(std::string port, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs)
     { }
     ~SocketCANDeviceThread()
     {
@@ -96,8 +96,8 @@ public:
 private:
     candle_handle m_device;
     
-   void ReadMessages(bool &reading) {
-       candle_frame_t incomingFrame;
+    void ReadMessages(bool &reading) {
+        candle_frame_t incomingFrame;
     
         reading = candle_frame_read(m_device, &incomingFrame, 0);
 
@@ -147,9 +147,9 @@ private:
 
             m_threadStatus = CANStatus::kOk;
         }
-   }
+    }
 
-   bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
+    bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
         if (el.m_intervalMs == 0 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
@@ -170,7 +170,7 @@ private:
             }
         }
         return false;
-   }
+    }
 
     void CandleRun() {
         while (m_threadComplete == false) {
@@ -187,7 +187,7 @@ private:
                 if (m_sendQueue.size() > 0) {
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
                     if (el.m_intervalMs == -1) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
                         continue;
                     }
 
@@ -195,12 +195,12 @@ private:
 
                     // Don't pop queue if send fails
                     if (WriteMessages(el, now)) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
 
                         // Return to end of queue if repeated
                         if (el.m_intervalMs > 0 ) {
                             el.m_prevTimestamp = now;
-                            m_sendQueue.push(el);
+                            m_sendQueue.push_back(el);
                         }
                     }
                 }

@@ -26,6 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
 #ifdef __linux__
 
 #include <map>
@@ -42,7 +43,7 @@ namespace usb {
 class SocketCANDevice : public CANDevice {
 public:
     SocketCANDevice() = delete;
-    SocketCANDevice(const char* port);
+    SocketCANDevice(std::string port);
     virtual ~SocketCANDevice();
 
     virtual std::string GetName() const;

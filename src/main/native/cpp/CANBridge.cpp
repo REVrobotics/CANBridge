@@ -63,7 +63,7 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
     new rev::usb::SerialDriver()
 #endif
 #ifdef __linux__
-    //new rev::usb::SocketCANDriver()
+    new rev::usb::SocketCANDriver()
 #endif
 };
 

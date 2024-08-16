@@ -6,16 +6,18 @@
 #include <string>
 #include <thread>
 
+#include <hal/simulation/CanData.h>
+#include <hal/CAN.h>
+
 namespace rev { 
 namespace usb {
 
-SocketCANDevice::SocketCANDevice(const char* port) {
-    m_thread(port){
+SocketCANDevice::SocketCANDevice(std::string port) :
+    m_thread(port) {
         m_descriptor = port;
         m_name = "SPARK MAX";
         m_thread.Start();
     }
-}
 
 SocketCANDevice::~SocketCANDevice() {
     m_thread.Stop();
@@ -89,20 +91,18 @@ CANStatus SocketCANDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_
 }
 
 CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) {
-    rev::usb::CANStatus status = m_thread.GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
-    return m_thread.GetLastThreadError;
-}
-
-CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) {
-    // Implementation
     rev::usb::CANStatusDetails details;
+    m_thread.GetCANStatus(&details);
     *percentBusUtilization = 0.0f;
     *busOff = details.busOffCount;
     *txFull = details.txFullCount;
-    *receiveErr = details.retrieveErrCount;
+    *receiveErr = details.receiveErrCount;
     *transmitErr = details.transmitErrCount;
-    *lastErrorTime = 0; // Not implemented
     return m_thread.GetLastThreadError();
+}
+
+CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) {
+    return GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
 }
 
 bool SocketCANDevice::IsConnected() {
