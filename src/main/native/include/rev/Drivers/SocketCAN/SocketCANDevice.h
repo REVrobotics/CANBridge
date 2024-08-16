@@ -62,6 +62,7 @@ public:
 
     virtual bool IsConnected() override;
 private:
+    SocketCANDeviceThread m_thread;
     std::string m_descriptor;
     std::string m_name;
 };

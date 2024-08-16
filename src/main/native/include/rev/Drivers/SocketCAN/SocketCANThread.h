@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if 0
+#ifdef __linux__
 
 #pragma once
 
