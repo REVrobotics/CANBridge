@@ -34,8 +34,7 @@ int SocketCANDevice::GetNumberOfErrors() {
 }
 
 int SocketCANDevice::GetId() const {
-    m_thread.EnqueueMessage(msg, periodMs);
-    return m_thread.GetLastThreadError();
+    return 0;
 }
 
 CANStatus SocketCANDevice::SendCANMessage(const CANMessage& msg, int periodMs) {
@@ -84,13 +83,13 @@ CANStatus SocketCANDevice::CloseStreamSession(uint32_t sessionHandle) {
     return m_thread.GetLastThreadError();
 }
 
-CANStatus SocketCANDevice::ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) {
+CANStatus SocketCANDevice::ReadStreamSession(uint32_t sessionHandle, struct HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) {
     m_thread.ReadStream(sessionHandle, msgs, messagesToRead, messagesRead);
     return m_thread.GetLastThreadError();
 }
 
 CANStatus SocketCANDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) {
-    rev::CANStatus status = m_thread.GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
+    rev::usb::CANStatus status = m_thread.GetCANDetailStatus(percentBusUtilization, busOff, txFull, receiveErr, transmitErr);
     return m_thread.GetLastThreadError;
 }
 

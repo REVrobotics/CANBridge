@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifdef __linux__
 
 #include <map>
 #include <string>
@@ -69,3 +69,5 @@ private:
 
 } // namespace usb
 } // namespace rev
+
+#endif
