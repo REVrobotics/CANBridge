@@ -45,6 +45,10 @@
 
 #include "rev/Drivers/SerialPort/SerialDriver.h"
 
+#ifdef __linux__
+#include "rev/Drivers/SocketCAN/SocketCANDriver.h"
+#endif
+
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
@@ -63,7 +67,8 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
     new rev::usb::SerialDriver()
 #endif
 #ifdef __linux__
-    new rev::usb::SocketCANDriver()
+    new rev::usb::SocketCANDriver(),
+    new rev::usb::SerialDriver()
 #endif
 };
 
@@ -313,5 +318,6 @@ void CANBridge_UnregisterDeviceFromHAL(const char* descriptor)
         }
     }
 }
+
 
 
