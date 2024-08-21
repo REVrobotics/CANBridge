@@ -1,31 +1,3 @@
-/*
- * Copyright (c) 2019 - 2020 REV Robotics
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of REV Robotics nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #ifdef __linux__
 
 #pragma once
@@ -37,11 +9,13 @@
 #include <map>
 #include <vector>
 #include <chrono>
-
-// TODO: remove me
-#include <clocale>
-#include <iostream>
-#include <iterator>
+#include <cstring>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <unistd.h>
 
 #include "rev/CANMessage.h"
 #include "rev/CANBridgeUtils.h"
@@ -50,22 +24,22 @@
 
 #include "utils/ThreadUtils.h"
 
-#include "candlelib/candle.h"
-
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 namespace rev {
 namespace usb {
 
-
-class SocketCANDeviceThread :public DriverDeviceThread { 
+class SocketCANDeviceThread : public DriverDeviceThread {
 public:
-    SocketCANDeviceThread() =delete;
-    SocketCANDeviceThread(std::string port, long long threadIntervalMs = 1) : DriverDeviceThread(0xe45b5597, threadIntervalMs)
-    { }
-    ~SocketCANDeviceThread()
-    {
+    SocketCANDeviceThread() = delete;
+    SocketCANDeviceThread(std::string port, long long threadIntervalMs = 1) 
+        : DriverDeviceThread(0xe45b5597, threadIntervalMs), m_port(port), m_socket(-1) { }
+    
+    ~SocketCANDeviceThread() {
+        if (m_socket != -1) {
+            close(m_socket);
+        }
     }
 
     void Start() override {
@@ -73,7 +47,13 @@ public:
             m_thread->join();
         }
 
-        m_thread = std::make_unique<std::thread>(&SocketCANDeviceThread::CandleRun, this);
+        // Initialize SocketCAN
+        if (!initializeSocketCAN()) {
+            m_threadStatus = CANStatus::kError;
+            return;
+        }
+
+        m_thread = std::make_unique<std::thread>(&SocketCANDeviceThread::SocketRun, this);
 
         // Set to high priority to prevent buffer overflow on the device on high client CPU load
         utils::SetThreadPriority(m_thread.get(), utils::ThreadPriority::High);
@@ -91,51 +71,78 @@ public:
         *status = CANStatus::kOk;
     }
 
-
-
 private:
-    candle_handle m_device;
-    
-    void ReadMessages(bool &reading) {
-        candle_frame_t incomingFrame;
-    
-        reading = candle_frame_read(m_device, &incomingFrame, 0);
+    std::string m_port;
+    int m_socket;
 
-        // Received a new frame, store it
+    bool initializeSocketCAN() {
+        struct ifreq ifr;
+        struct sockaddr_can addr;
+
+        // Create socket
+        m_socket = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+        if (m_socket < 0) {
+            perror("SocketCAN socket");
+            return false;
+        }
+
+        // Specify CAN interface
+        std::strncpy(ifr.ifr_name, m_port.c_str(), IFNAMSIZ - 1);
+        if (ioctl(m_socket, SIOCGIFINDEX, &ifr) < 0) {
+            perror("SocketCAN ioctl");
+            return false;
+        }
+
+        // Bind the socket to the CAN interface
+        addr.can_family = AF_CAN;
+        addr.can_ifindex = ifr.ifr_ifindex;
+        if (bind(m_socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            perror("SocketCAN bind");
+            return false;
+        }
+
+        return true;
+    }
+
+    void ReadMessages(bool &reading) {
+        struct can_frame frame;
+        int nbytes = read(m_socket, &frame, sizeof(struct can_frame));
+
+        reading = (nbytes > 0);
         if (reading) {
-            candle_frametype_t frameType = candle_frame_type(&incomingFrame);
-            if(frameType == CANDLE_FRAMETYPE_ERROR) {
+            if (frame.can_id & CAN_ERR_FLAG) {
+                // Handle error frame
+                m_statusDetails.busOffCount++;
+                m_threadStatus = CANStatus::kError;
                 // Parse error data
-                if (incomingFrame.can_id & 0x00000040) {
+                if (frame.can_id & 0x00000040) {
                     m_statusDetails.busOffCount++;
                 } 
-                if (incomingFrame.data[1] & 0x02) {
+                if (frame.data[1] & 0x02) {
                     m_statusDetails.txFullCount++;
                 }
-                if (incomingFrame.data[1] & 0x10 || incomingFrame.data[1] & 0x04) {
+                if (frame.data[1] & 0x10 || frame.data[1] & 0x04) {
                     m_statusDetails.receiveErrCount++;
                 }
-                if (incomingFrame.data[1] & 0x20 || incomingFrame.data[1] & 0x08 || incomingFrame.data[2] & 0x80 || incomingFrame.data[4]) {
+                if (frame.data[1] & 0x20 || frame.data[1] & 0x08 || frame.data[2] & 0x80 || frame.data[4]) {
                     m_statusDetails.transmitErrCount++;
                 }
-            } else if(frameType == CANDLE_FRAMETYPE_RECEIVE) {
-                
-                auto msg = std::make_shared<CANMessage>(candle_frame_id(&incomingFrame),
-                                                        candle_frame_data(&incomingFrame),
-                                                        candle_frame_dlc(&incomingFrame),
-                                                        candle_frame_timestamp_us(&incomingFrame));
+            } else {
+                auto msg = std::make_shared<CANMessage>(frame.can_id,
+                                                        frame.data,
+                                                        frame.can_dlc,
+                                                        std::chrono::steady_clock::now().time_since_epoch().count() / 1000);
 
                 // Read functions
                 {
                     std::lock_guard<std::mutex> lock(m_readMutex);
-                    m_readStore[candle_frame_id(&incomingFrame)] = msg;
+                    m_readStore[frame.can_id] = msg;
                 }
 
                 // Streaming functions
                 {
                     std::lock_guard<std::mutex> lock(m_streamMutex);
                     for (auto& stream : m_readStream) {
-                        // Compare current size of the buffer to the max size of the buffer
                         if (!stream.second->messages.IsFull()
                             && rev::usb::CANBridge_ProcessMask({stream.second->messageId, stream.second->messageMask},
                             msg->GetMessageId())) {
@@ -150,17 +157,14 @@ private:
     }
 
     bool WriteMessages(detail::CANThreadSendQueueElement el, std::chrono::steady_clock::time_point now) {
-        if (el.m_intervalMs == 0 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
-            candle_frame_t frame;
+        if (el.m_intervalMs <= 1 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
+            struct can_frame frame;
+            frame.can_id = el.m_msg.GetMessageId();
             frame.can_dlc = el.m_msg.GetSize();
-            // set extended id flag
-            frame.can_id = el.m_msg.GetMessageId() | 0x80000000;
-            memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
-            frame.timestamp_us = now.time_since_epoch().count() / 1000;
+            std::memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
 
-            // TODO: Feed back an error
-            if (candle_frame_send(m_device, 0, &frame, false, 20) == false) {
-                // std::cout << "Failed to send message: " << std::hex << (int)el.m_msg.GetMessageId() << std::dec << "  " << candle_error_text(candle_dev_last_error(m_device)) << std::endl;
+            int nbytes = write(m_socket, &frame, sizeof(struct can_frame));
+            if (nbytes != sizeof(struct can_frame)) {
                 m_threadStatus = CANStatus::kDeviceWriteError;
                 m_statusErrCount++;
                 return false;
@@ -172,7 +176,7 @@ private:
         return false;
     }
 
-    void CandleRun() {
+    void SocketRun() {
         while (m_threadComplete == false) {
             m_threadStatus = CANStatus::kOk; // Start each loop with the status being good. Really only a write issue.
             auto sleepTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(m_threadIntervalMs);
@@ -211,7 +215,6 @@ private:
                 std::this_thread::sleep_until(sleepTime);
             }
         }
-
     }
 };
 
