@@ -34,7 +34,7 @@
 #include <iostream> //TODO: Remove
 #include <thread>
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 #define CANDLE_DEFAULT_CHANNEL 0
@@ -59,9 +59,9 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         throw "Failed to open device!";
     }
 
-    // Set FRC capable settings, SPARK MAX is hard coded to this, but other devices (e.g. canable with 
+    // Set FRC capable settings, SPARK MAX is hard coded to this, but other devices (e.g. canable with
     // candlelight_fw) may need to be set to it explicitly. Note this only works for devices with 48MHz
-    // clocks, and could be expanded in the future to work with any device that properly reports its 
+    // clocks, and could be expanded in the future to work with any device that properly reports its
     // own capabilities.
     if (!candle_channel_set_bitrate(hDev, CANDLE_DEFAULT_CHANNEL, 1000000)) {
         std::cout << "Unable to set bitrate! " << candle_error_text(candle_dev_last_error(hDev)) << std::endl;
@@ -73,7 +73,7 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
         close_candle_dev(hDev);
         throw "Failed to start device channel 0!";
     }
-    
+
     m_descriptor = unicode_decode(candle_dev_get_path(m_handle));
     m_name = candle_dev_get_name(m_handle);
     m_thread.Start();
@@ -82,9 +82,13 @@ CandleWinUSBDevice::CandleWinUSBDevice(candle_handle hDev) :
 CandleWinUSBDevice::~CandleWinUSBDevice()
 {
     m_thread.Stop();
-    
+
     candle_channel_stop(m_handle, CANDLE_DEFAULT_CHANNEL);
     close_candle_dev(m_handle);
+}
+
+void CandleWinUSBDevice::ClearSendQueue() {
+    m_thread.clearQueue();
 }
 
 std::string CandleWinUSBDevice::GetName() const
@@ -108,6 +112,14 @@ int CandleWinUSBDevice::GetNumberOfErrors()
     return m_thread.GetNumberOfErrors();
 }
 
+void CandleWinUSBDevice::setThreadPriority(utils::ThreadPriority priority) {
+    m_thread.setPriority(priority);
+}
+
+void CandleWinUSBDevice::stopRepeatedMessage(uint32_t messageId) {
+    m_thread.stopRepeatedMessage(messageId);
+}
+
 CANStatus CandleWinUSBDevice::SendCANMessage(const CANMessage& msg, int periodMs)
 {
     m_thread.EnqueueMessage(msg, periodMs);
@@ -118,22 +130,26 @@ CANStatus CandleWinUSBDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg
 {
     // Assume timeout
     CANStatus status = CANStatus::kTimeout;
-   
+
     // parse through the keys, find the messges the match, and return it
     // The first in the message id, then the messages
     std::map<uint32_t, std::shared_ptr<CANMessage>> messages;
     m_thread.ReceiveMessage(messages);
     std::shared_ptr<CANMessage> mostRecent;
     for (auto& m : messages) {
-        if (CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first) && CANBridge_ProcessMask({messageID, messageMask}, m.first)) {
+        if (
+            CANBridge_ProcessMask({m.second->GetMessageId(), 0}, m.first)
+            && CANBridge_ProcessMask({messageID, messageMask}, m.first)
+            && (!mostRecent || m.second->GetTimestampUs() > mostRecent->GetTimestampUs())
+        ) {
             mostRecent = m.second;
-            status = CANStatus::kOk;    
+            status = CANStatus::kOk;
         }
     }
-    
+
     if (status == CANStatus::kOk) {
         msg = mostRecent;
-        status = m_thread.GetLastThreadError(); // check and see if something else went wrong 
+        status = m_thread.GetLastThreadError(); // check and see if something else went wrong
     }
 
     return status;
@@ -144,7 +160,7 @@ CANStatus CandleWinUSBDevice::OpenStreamSession(uint32_t* sessionHandle, CANBrid
     CANStatus status;
     // Register the stream with the correct buffer size
     m_thread.OpenStream(sessionHandle, filter, maxSize, &status);
-    
+
     return m_thread.GetLastThreadError();
 }
 CANStatus CandleWinUSBDevice::CloseStreamSession(uint32_t sessionHandle)
@@ -158,14 +174,13 @@ CANStatus CandleWinUSBDevice::ReadStreamSession(uint32_t sessionHandle, struct H
     return m_thread.GetLastThreadError();
 }
 
-CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr)
+CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) {
+    return GetCANDetailStatus(percentBusUtilization, busOff, txFull,receiveErr, transmitErr, nullptr);
+}
+
+CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime)
 {
-    rev::usb::CANStatusDetails details;
-    m_thread.GetCANStatus(&details);
-    *busOff = details.busOffCount;
-    *txFull = details.txFullCount;
-    *receiveErr = details.receiveErrCount;
-    *transmitErr = details.transmitErrCount;
+    m_thread.GetCANStatusDetails(busOff, txFull, receiveErr, transmitErr, lastErrorTime);
     *percentBusUtilization = 0.0; // todo how to get this
 
     return m_thread.GetLastThreadError();

@@ -1,0 +1,107 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '*'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            container: ''
+            name: windows64
+    name: "build-${{ matrix.name }}"
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 11
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .gradle
+            bin
+            build
+          key: ${{ matrix.name }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.name }}-build-
+
+      - name: Build
+        run: |
+          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
+
+      - name: Download WPILib HAL artifacts and headers, gather all needed headers
+        run : |
+          halVersion=$(cat wpiHalVersion.txt)
+          
+          # Download WPILib artifacts from Artifactory 
+          halWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-windowsx86-64.zip
+          halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
+          utilWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
+          utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
+          curl -o halWindows.zip "$halWindowsUrl"
+          curl -o halHeaders.zip "$halHeadersUrl"
+          curl -o utilWindows.zip "$utilWindowsUrl"
+          curl -o utilHeaders.zip "$utilHeadersUrl"
+          unzip halWindows.zip -d halWindows
+          unzip halHeaders.zip -d halHeaders
+          unzip utilWindows.zip -d utilWindows
+          unzip utilHeaders.zip -d utilHeaders
+
+          # Gather all of the the needed headers
+          mkdir headers-for-artifact
+          cp -r halHeaders/hal headers-for-artifact
+          cp -r utilHeaders/wpi headers-for-artifact
+          cp -r src/main/native/include/* headers-for-artifact
+
+          # Zip the needed headers and put them in the appropriate location for artifact upload
+          mkdir -p CANBridge-artifacts
+          7z a CANBridge-artifacts/headers.zip ./headers-for-artifact/*
+
+      # Put release files together in one directory
+      - name: Create Artifact
+        run: |
+          mkdir -p CANBridge-artifacts
+          cp build/libs/cANBridge/static/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge-static.lib
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.dll CANBridge-artifacts/CANBridge.dll
+          cp build/libs/cANBridge/shared/windowsx86-64/release/CANBridge.lib CANBridge-artifacts/CANBridge.lib
+          cp halWindows/windows/x86-64/shared/wpiHal.dll CANBridge-artifacts/wpiHal.dll
+          cp halWindows/windows/x86-64/shared/wpiHal.lib CANBridge-artifacts/wpiHal.lib
+          cp utilWindows/windows/x86-64/shared/wpiutil.dll CANBridge-artifacts/wpiutil.dll
+          cp utilWindows/windows/x86-64/shared/wpiutil.lib CANBridge-artifacts/wpiutil.lib
+
+      # Upload build artifact
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: CANBridge-${{ github.sha }}
+          path: CANBridge-artifacts/
+
+      # Upload version.txt
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: version
+          path: build/allOutputs/version.txt

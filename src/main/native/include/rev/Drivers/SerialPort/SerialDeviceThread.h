@@ -51,7 +51,7 @@
 
 #include "serial/serial.h"
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 namespace rev {
@@ -272,7 +272,7 @@ private:
                 std::lock_guard<std::mutex> lock(m_writeMutex);
                 if (m_sendQueue.size() > 0) {
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
-                    m_sendQueue.pop();
+                    m_sendQueue.pop_front();
                     if (el.m_intervalMs == -1) {
                         continue;
                     }
@@ -285,7 +285,7 @@ private:
                         if (el.m_intervalMs > 0 ) {
                             el.m_prevTimestamp = now;
                             
-                            m_sendQueue.push(el);
+                            m_sendQueue.push_back(el);
                         }
                         doRead = true;
                     }

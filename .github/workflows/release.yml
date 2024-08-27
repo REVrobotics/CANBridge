@@ -1,0 +1,74 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      TAG_NAME: ${{ env.TAG_NAME }}
+      VERSION: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Wait for build to finish
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'build-windows64'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+      - name: Get tag name
+        run: |
+          echo "TAG_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      # Download artifacts from build workflow
+      - name: Download workflow artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build.yml
+          commit: ${{ github.sha }}
+          path: '.'
+
+      # Get publish.gradle version
+      - name: Get publish.gradle version
+        id: get_version
+        run: |
+          echo "version=$(cat version/version.txt)" >> $GITHUB_OUTPUT
+          echo "expectedTagName=v$(cat version/version.txt)" >> $GITHUB_OUTPUT
+
+      # Check publish.gradle version
+      - name: publish.gradle version check FAILED
+        if: ${{ steps.get_version.outputs.expectedTagName != env.TAG_NAME }}
+        run: |
+          echo Tag name: ${{ env.TAG_NAME }}
+          echo publish.gradle version: ${{ steps.get_version.outputs.version }}
+          exit 1
+
+  prepare-release:
+    runs-on: ubuntu-latest
+    needs: check-versions
+    steps:
+      # Download API, docs, and version.txt
+      - name: Download workflow artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build.yml
+          commit: ${{ github.sha }}
+          path: '.'
+
+      # Create new release draft
+      - name: Create release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ needs.check-versions.outputs.version }}
+          TAG=v$VERSION
+          ls --recursive -l
+          gh release create $TAG CANBridge-${{ github.sha }}/* --repo $GITHUB_REPOSITORY --draft --title "Version $VERSION"

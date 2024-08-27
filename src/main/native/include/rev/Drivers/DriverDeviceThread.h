@@ -37,6 +37,7 @@
 #include <map>
 #include <queue>
 #include <memory>
+#include <time.h>
 
 #include <iostream>
 
@@ -46,7 +47,7 @@
 
 #include "utils/ThreadUtils.h"
 
-#include <mockdata/CanData.h>
+#include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
 namespace rev {
@@ -64,7 +65,7 @@ public:
         m_threadIntervalMs(threadIntervalMs),
         m_counter(counter) {
     }
-
+    
     virtual void Start() = 0;
 
     void Stop() {
@@ -74,9 +75,30 @@ public:
         }
     }
 
+    detail::CANThreadSendQueueElement* findFirstMatchingId(int targetId) {
+        for (auto& element : m_sendQueue) {
+            if (element.m_msg.GetMessageId() == targetId) {
+                return &element;
+            }
+        }
+        return nullptr; // If no matching element found
+    }
+
+    void removeElementsWithId(int targetId) {
+        m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
+    }
+
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
-        m_sendQueue.push(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+
+        detail::CANThreadSendQueueElement* existing = findFirstMatchingId(msg.GetMessageId());
+
+        if(existing) {
+            existing->m_intervalMs = timeIntervalMs;
+            existing->m_msg = msg;
+        } else {
+            m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+        }
 
         // TODO: Limit the max queue size
         return true;
@@ -133,6 +155,14 @@ public:
         details = &m_statusDetails;
     }
 
+    void GetCANStatusDetails(uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* errorTime) {
+        *busOff = m_statusDetails.busOffCount;
+        *txFull = m_statusDetails.txFullCount;
+        *receiveErr = m_statusDetails.receiveErrCount;
+        *transmitErr = m_statusDetails.transmitErrCount;
+        *errorTime = lastErrorTime;
+    }
+
     CANStatus GetLastThreadError() {
         CANStatus last = m_threadStatus;
         m_threadStatus = CANStatus::kOk;
@@ -156,10 +186,11 @@ protected:
     uint32_t m_counter;
 
     CANStatusDetails m_statusDetails;
+    time_t lastErrorTime;
     int m_statusErrCount = 0;
     CANStatus m_threadStatus = CANStatus::kOk;
 
-    std::queue<detail::CANThreadSendQueueElement> m_sendQueue;
+    std::deque<detail::CANThreadSendQueueElement> m_sendQueue;
     std::map<uint32_t, std::shared_ptr<CANMessage>> m_readStore;
     std::map<uint32_t, std::unique_ptr<CANStreamHandle>> m_readStream; // (id, mask), max size, message buffer
 
@@ -190,7 +221,7 @@ protected:
                 for (size_t i=0;i<queueSize;i++) {
                     detail::CANThreadSendQueueElement el = m_sendQueue.front();
                     if (el.m_intervalMs == -1) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
                         continue;
                     }
 
@@ -198,12 +229,12 @@ protected:
 
                     // Don't pop queue if send fails
                     if (WriteMessages(el, now)) {
-                        m_sendQueue.pop();
+                        m_sendQueue.pop_front();
 
                         // Return to end of queue if repeated
                         if (el.m_intervalMs > 0 ) {
                             el.m_prevTimestamp = now;
-                            m_sendQueue.push(el);
+                            m_sendQueue.push_back(el);
                         }
                     } else {
                         // Wait a little bit before trying again
