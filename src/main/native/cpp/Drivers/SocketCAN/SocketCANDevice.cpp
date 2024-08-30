@@ -15,7 +15,8 @@ namespace usb {
 SocketCANDevice::SocketCANDevice(std::string port) :
     m_thread(port) {
         m_descriptor = port;
-        m_name = "SPARK MAX";
+        // TODO: Get the name of the device, for now just hardcode the name
+        m_name = "SocketCAN Device";
         m_thread.Start();
     }
 
