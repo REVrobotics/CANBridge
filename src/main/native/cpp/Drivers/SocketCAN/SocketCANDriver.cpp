@@ -26,26 +26,69 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifdef __linux__
+
+#include "rev/Drivers/SocketCAN/SocketCANDriver.h"
+#include "rev/Drivers/SocketCAN/SocketCANDevice.h"
 
 #include <map>
-#include <string>
+#include <iostream>
+#include <memory>
 
-#include "rev/CANDriver.h"
+#include <net/if.h>
 
 namespace rev {
 namespace usb {
 
-class SerialDriver : public CANDriver {
-public:
-    SerialDriver() {}
-    virtual ~SerialDriver() override {}
+std::vector<CANDeviceDetail> SocketCANDriver::GetDevices()
+{
+    std::vector<CANDeviceDetail> retval;
 
-    virtual std::string GetName() const override {return "Legacy";}
+    // TODO: Better way of doing this?
+    // find canx or vcanx interface names
+    struct if_nameindex *if_nidxs, *intf;
 
-    virtual std::vector<CANDeviceDetail> GetDevices() override;
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor) override;
-};
+    if_nidxs = if_nameindex();
+    if ( if_nidxs != NULL )
+    {
+        for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++)
+        {
+            char* buf = intf->if_name;
 
+            // Not possible can name, protect later compares
+            if (strnlen(buf, 4) < 4) {
+                continue;
+            }
+
+            // possibly vcanx
+            if (buf[0] == 'v') {
+                buf++;
+            }
+
+            if (strncmp(buf, "can", 3) == 0) {
+                std::string ifnameStr = std::string(intf->if_name);
+                retval.push_back( {ifnameStr, ifnameStr, this->GetName()} );
+            }
+        }
+
+        if_freenameindex(if_nidxs);
+    }
+
+    return retval;
+}
+
+std::unique_ptr<CANDevice> SocketCANDriver::CreateDeviceFromDescriptor(const char* descriptor)
+{
+    try {
+        return std::make_unique<SocketCANDevice>(descriptor);
+    } catch(...) {
+        // do nothing if it failed
+    }
+    return std::unique_ptr<CANDevice>(nullptr);
+}
 } // namespace usb
 } // namespace rev
+
+#else
+typedef int __ISOWarning__CLEAR_;
+#endif // _WIN32

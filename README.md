@@ -63,6 +63,20 @@ The output is placed at `~\releases\maven\release\com\revrobotics\usb\CANBridge-
 6. Add release notes to the draft release
 7. Publish the draft release
 
+## Linux
+
+> [!NOTE]
+>
+> This branch is a work in progress, testing does show that it does work, however this still might be some issues. If you do run across those issues, please create an issue so we can diagnose.
+
+The latest firmware version will work with Linux if the `SocketCAN` and `gs_usb` drivers are enabled. The following udev rule will work to enable this:
+
+Create a new file named and located at: `/etc/udev/rules.d/99-canbridge.rules`
+
+```text
+ACTION=="add", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="a30e", RUN+="/sbin/modprobe gs_usb" RUN+="/bin/sh -c 'echo 0483 a30e > /sys/bus/usb/drivers/gs_usb/new_id'"
+```
+
 ## Changelog
 
 The SDK Changelog can be viewed with [Changelog.md](Changelog.md).

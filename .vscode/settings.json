@@ -68,7 +68,22 @@
         "iterator": "cpp",
         "sstream": "cpp",
         "cctype": "cpp",
-        "concepts": "cpp"
+        "concepts": "cpp",
+        "inet.h": "c",
+        "cwctype": "cpp",
+        "array": "cpp",
+        "hash_map": "cpp",
+        "*.tcc": "cpp",
+        "bitset": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "optional": "cpp",
+        "random": "cpp",
+        "set": "cpp",
+        "string_view": "cpp",
+        "cinttypes": "cpp"
     },
     "C_Cpp.default.configurationProvider": "vscode-wpilib",
     "C_Cpp.errorSquiggles": "enabled"
