@@ -32,12 +32,20 @@
 
 #include "gtest/gtest.h"
 
+#ifdef __linux__
 #include <rev/Drivers/SocketCAN/SocketCANDriver.h>
-
+#elif _WIN32
+#include <rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h>
+#endif
 
 int main(int argc, char** argv) {
 
+  #ifdef __linux__
   rev::usb::SocketCANDriver driver;
+  #elif _WIN32
+  rev::usb::CandleWinUSBDriver driver;
+  #endif
+
 
   auto output = driver.GetDevices();
 
@@ -54,9 +62,6 @@ int main(int argc, char** argv) {
 
   std::cout << "Selected device: " << device->GetName() << std::endl;
 
-  return 0;
-
-  #if 0
   HAL_Initialize(500, 0);
   frc::MockDS ds;
   ds.start();
@@ -66,5 +71,4 @@ int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   int ret = RUN_ALL_TESTS();
   return ret;
-  #endif
 }
