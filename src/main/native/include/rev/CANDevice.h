@@ -52,6 +52,21 @@ public:
 
     virtual int GetId() const = 0;
 
+    /**
+     * Start, stop, or update a periodic signal
+     *
+     * @param msg the message to send. See notes in periodMs.
+     * @param periodMs the period of the signal, 0, or -1. If this value is -1,
+     *        the value of msg is irrelevant, and we stop any signals with the
+     *        given id. If the value is 0, we queue a new message given by msg.
+     *        This message will always be scheduled to be sent exactly once.
+     *        If this value is any positive value, schedule msg to be sent
+     *        every periodMs milliseconds. If a message with this id was already
+     *        scheduled to repeat, update the period and message contents. Note
+     *        that this will not replace a message with periodMs set to 0
+     *
+     * @return a CANStatus
+     */
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) = 0;
     virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) = 0;
     virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) = 0;
