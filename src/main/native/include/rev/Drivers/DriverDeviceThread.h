@@ -75,15 +75,6 @@ public:
         }
     }
 
-    detail::CANThreadSendQueueElement* findFirstMatchingId(int targetId) {
-        for (auto& element : m_sendQueue) {
-            if (element.m_msg.GetMessageId() == targetId) {
-                return &element;
-            }
-        }
-        return nullptr; // If no matching element found
-    }
-
     detail::CANThreadSendQueueElement* findFirstMatchingIdWithNonZeroInterval(int targetId) {
         for (auto& element : m_sendQueue) {
             if (element.m_msg.GetMessageId() == targetId && element.m_intervalMs > 0) {
