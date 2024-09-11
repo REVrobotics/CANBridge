@@ -75,7 +75,7 @@ public:
         }
     }
 
-    detail::CANThreadSendQueueElement* findFirstMatchingIdWithNonZeroInterval(int targetId) {
+    detail::CANThreadSendQueueElement* findFirstMatchingIdWithNonZeroInterval(uint32_t targetId) {
         for (auto& element : m_sendQueue) {
             if (element.m_msg.GetMessageId() == targetId && element.m_intervalMs > 0) {
                 return &element;
@@ -84,7 +84,7 @@ public:
         return nullptr; // If no matching element found
     }
 
-    void removeElementsWithId(int targetId) {
+    void removeElementsWithId(uint32_t targetId) {
         m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
     }
 
