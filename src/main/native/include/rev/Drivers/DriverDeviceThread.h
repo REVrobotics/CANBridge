@@ -103,6 +103,12 @@ public:
         if(timeIntervalMs == 0) {
             // If the time interval is 0, we want to allow duplicates.
             m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+
+            // Cancel existing repeating frame with same id
+            detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
+            if(existing) {
+                existing->m_intervalMs = -1;
+            }
         } else {
             // We don't want to replace elements with zero as the interval. Those should be guaranteed to be sent
             detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
