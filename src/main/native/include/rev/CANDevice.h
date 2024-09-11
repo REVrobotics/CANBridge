@@ -60,10 +60,11 @@ public:
      *        the value of msg is irrelevant, and we stop any signals with the
      *        given id. If the value is 0, we queue a new message given by msg.
      *        This message will always be scheduled to be sent exactly once.
+     *        If a repeating value is scheduled, passing 0 will cancel it.
      *        If this value is any positive value, schedule msg to be sent
      *        every periodMs milliseconds. If a message with this id was already
      *        scheduled to repeat, update the period and message contents. Note
-     *        that this will not replace a message with periodMs set to 0
+     *        that this will not replace a message with periodMs set to 0.
      *
      * @return a CANStatus
      */
