@@ -24,9 +24,17 @@ updateFrameData(frame)
 sendMessage(frame, 2000)
 ```
 
-In this case, the first frame will be scheduled immediately, the second will be scheduled 5 seconds later, and after that, subsequent frames will be scheduled every 2 seconds. Note
-that any change to the data in the second call will not be sent, meaning the second call is essentially a no-op if a new call with different data is sent before the previous
-interval is up. Sending a frame with an interval of `-1` will cancel the repeat, and not send the frame. Sending with an interval of `0` will schedule the new frame once, then stop repeating.
+In this case, the first frame will be scheduled immediately,
+the second will be scheduled 5 seconds later, and after that,
+subsequent frames will be scheduled every 2 seconds. Note
+that any change to the data in the second call will not be
+sent, meaning the second call is essentially a no-op if a
+new call with different data is sent before the previous
+interval is up. Sending a frame with an interval of -1
+will cancel the repeat, and not send the frame. Sending with
+an interval of 0 will schedule the new frame once, then stop
+repeating. Unlike with a positive interval, an interval of 0 
+guarantees that each new message will be sent.
 
 ## Build Requirements
 

@@ -75,29 +75,41 @@ public:
         }
     }
 
-    detail::CANThreadSendQueueElement* findFirstMatchingId(int targetId) {
+    detail::CANThreadSendQueueElement* findFirstMatchingIdWithNonZeroInterval(uint32_t targetId) {
         for (auto& element : m_sendQueue) {
-            if (element.m_msg.GetMessageId() == targetId) {
+            if (element.m_msg.GetMessageId() == targetId && element.m_intervalMs > 0) {
                 return &element;
             }
         }
         return nullptr; // If no matching element found
     }
 
-    void removeElementsWithId(int targetId) {
+    void removeElementsWithId(uint32_t targetId) {
         m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
     }
 
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
 
-        detail::CANThreadSendQueueElement* existing = findFirstMatchingId(msg.GetMessageId());
-
-        if(existing) {
-            existing->m_intervalMs = timeIntervalMs;
-            existing->m_msg = msg;
-        } else {
+        if(timeIntervalMs == 0) {
+            // If the time interval is 0, we want to allow duplicates.
             m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+
+            // Cancel existing repeating frame with same id
+            detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
+            if(existing) {
+                existing->m_intervalMs = -1;
+            }
+        } else {
+            // We don't want to replace elements with zero as the interval. Those should be guaranteed to be sent
+            detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
+
+            if(existing) {
+                existing->m_intervalMs = timeIntervalMs;
+                existing->m_msg = msg;
+            } else {
+                m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
+            }
         }
 
         // TODO: Limit the max queue size

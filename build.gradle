@@ -14,11 +14,13 @@ allprojects {
     repositories {
         mavenCentral()
     }
-    if (project.hasProperty('releaseMode')) {
-        wpilibRepositories.addAllReleaseRepositories(it)
-    } else {
-        wpilibRepositories.addAllDevelopmentRepositories(it)
-    }
+    // Replace this line with the commented-out lines if we ever start including CANBridge in the FRC Beta
+    wpilibRepositories.addAllReleaseRepositories(it)
+//    if (project.hasProperty('releaseMode')) {
+//      wpilibRepositories.addAllReleaseRepositories(it)
+//    } else {
+//      wpilibRepositories.addAllDevelopmentRepositories(it)
+//    }
 }
 
 apply from: 'config.gradle'
