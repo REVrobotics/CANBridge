@@ -88,6 +88,10 @@ public:
         m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
     }
 
+    void removeRepeatingWithId(uint32_t targetId) {
+        m_sendQueue.erase(std::remove_if(m_sendQueue.begin(), m_sendQueue.end(), [targetId](detail::CANThreadSendQueueElement element) { return element.m_intervalMs > 0 && element.m_msg.GetMessageId() == targetId; }), m_sendQueue.end());
+    }
+
     bool EnqueueMessage(const CANMessage& msg, int32_t timeIntervalMs) {
         std::lock_guard<std::mutex> lock(m_writeMutex);
 
@@ -96,10 +100,10 @@ public:
             m_sendQueue.push_back(detail::CANThreadSendQueueElement(msg, timeIntervalMs));
 
             // Cancel existing repeating frame with same id
-            detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
-            if(existing) {
-                existing->m_intervalMs = -1;
-            }
+            removeRepeatingWithId(msg.GetMessageId());
+        } else if(timeIntervalMs == -1) {
+            // Remove any scheduled messages with this ID
+            removeRepeatingWithId(msg.GetMessageId());
         } else {
             // We don't want to replace elements with zero as the interval. Those should be guaranteed to be sent
             detail::CANThreadSendQueueElement* existing = findFirstMatchingIdWithNonZeroInterval(msg.GetMessageId());
