@@ -38,6 +38,7 @@
 
 #define EXTENDED_ID_MASK 0x40000000
 #define REMOTE_FRAME_MASK 0x80000000
+#define NON_RESERVED_ARB_ID_MASK 0x1FFFFFFF
 
 namespace rev {
 namespace usb {

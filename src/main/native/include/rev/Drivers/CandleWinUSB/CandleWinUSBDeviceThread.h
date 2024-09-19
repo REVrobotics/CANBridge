@@ -173,7 +173,7 @@ private:
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
 
-            uint32_t messageId = el.m_msg.GetMessageId();
+            uint32_t messageId = el.m_msg.GetMessageId() & NON_RESERVED_ARB_ID_MASK;
 
             bool isExtended = true; // FRC CAN is always extended
             bool isRtr = messageId & REMOTE_FRAME_MASK;
