@@ -36,6 +36,9 @@
 #include <iostream>
 #include <chrono>
 
+#define EXTENDED_ID_MASK 0x40000000
+#define REMOTE_FRAME_MASK 0x80000000
+
 namespace rev {
 namespace usb {
 
@@ -178,6 +181,7 @@ private:
     uint8_t m_size;
     uint32_t m_messageId;
     uint32_t m_timestamp;
+    bool m_is_remote;
     bool m_isNew{true};
 };
 
