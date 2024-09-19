@@ -176,7 +176,7 @@ private:
             uint32_t messageId = el.m_msg.GetMessageId() & NON_RESERVED_ARB_ID_MASK;
 
             bool isExtended = true; // FRC CAN is always extended
-            bool isRtr = messageId & REMOTE_FRAME_MASK;
+            bool isRtr = messageId & HAL_CAN_IS_FRAME_REMOTE;
 
             frame.can_id = messageId;
             if(isExtended) {
