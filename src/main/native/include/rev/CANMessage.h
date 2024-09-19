@@ -180,7 +180,6 @@ private:
     uint8_t m_size;
     uint32_t m_messageId;
     uint32_t m_timestamp;
-    bool m_is_remote;
     bool m_isNew{true};
 };
 
