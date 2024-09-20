@@ -36,6 +36,8 @@
 #include <iostream>
 #include <chrono>
 
+#define NON_RESERVED_ARB_ID_MASK 0x1FFFFFFF
+
 namespace rev {
 namespace usb {
 

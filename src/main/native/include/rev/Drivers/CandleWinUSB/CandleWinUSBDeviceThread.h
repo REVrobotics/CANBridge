@@ -53,6 +53,9 @@
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
+#define CANDLE_EXTENDED_ID_MASK 0x80000000
+#define CANDLE_REMOTE_FRAME_MASK 0x40000000
+
 namespace rev {
 namespace usb {
 
@@ -169,8 +172,20 @@ private:
         if (el.m_intervalMs <= 1 || (now - el.m_prevTimestamp >= std::chrono::milliseconds(el.m_intervalMs)) ) {
             candle_frame_t frame;
             frame.can_dlc = el.m_msg.GetSize();
-            // set extended id flag
-            frame.can_id = el.m_msg.GetMessageId() | 0x80000000;
+
+            uint32_t messageId = el.m_msg.GetMessageId() & NON_RESERVED_ARB_ID_MASK;
+
+            bool isExtended = true; // FRC CAN is always extended
+            bool isRtr = messageId & HAL_CAN_IS_FRAME_REMOTE;
+
+            frame.can_id = messageId;
+            if(isExtended) {
+            	frame.can_id |= CANDLE_EXTENDED_ID_MASK;
+            }
+            if(isRtr) {
+                frame.can_id |= CANDLE_REMOTE_FRAME_MASK;
+            }
+
             memcpy(frame.data, el.m_msg.GetData(), frame.can_dlc);
             frame.timestamp_us = now.time_since_epoch().count() / 1000;
 
