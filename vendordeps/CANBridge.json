@@ -23,5 +23,7 @@
                 "linuxx64"
             ]
         }
-    ]
+    ],
+    "javaDependencies": [],
+    "jniDependencies": []
 }
