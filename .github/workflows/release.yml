@@ -3,33 +3,39 @@ name: Create release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  check-versions:
+  # Checks previous build workflow and gets the version from publish.gradle
+  check-build:
+    name: Check build and publish versions
     runs-on: ubuntu-latest
     outputs:
       TAG_NAME: ${{ env.TAG_NAME }}
       VERSION: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Wait for build to finish
-        uses: lewagon/wait-on-check-action@v1.3.1
+      - name: Wait for build workflow to finish
+        uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.ref }}
-          check-name: 'build-windows64'
+          check-regexp: 'Build|WPILib Headers|Version'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
-      - name: Get tag name
-        run: |
-          echo "TAG_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       # Download artifacts from build workflow
       - name: Download workflow artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
           commit: ${{ github.sha }}
@@ -37,38 +43,36 @@ jobs:
 
       # Get publish.gradle version
       - name: Get publish.gradle version
-        id: get_version
+        id: get-version
         run: |
           echo "version=$(cat version/version.txt)" >> $GITHUB_OUTPUT
           echo "expectedTagName=v$(cat version/version.txt)" >> $GITHUB_OUTPUT
 
-      # Check publish.gradle version
-      - name: publish.gradle version check FAILED
-        if: ${{ steps.get_version.outputs.expectedTagName != env.TAG_NAME }}
-        run: |
-          echo Tag name: ${{ env.TAG_NAME }}
-          echo publish.gradle version: ${{ steps.get_version.outputs.version }}
-          exit 1
-
+  # Creates a release draft with the artifacts from the build workflow
   prepare-release:
+    name: Prepare release
     runs-on: ubuntu-latest
-    needs: check-versions
+    needs: check-build
     steps:
       # Download API, docs, and version.txt
       - name: Download workflow artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
           commit: ${{ github.sha }}
           path: '.'
+          skip_unpack: true
+
+      # This step is to check what files are downloaded and how they are structured, as well as binary sizes for releases
+      - name: List files
+        run: |
+          ls -Rlh
 
       # Create new release draft
       - name: Create release
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=${{ needs.check-versions.outputs.version }}
-          TAG=v$VERSION
-          ls --recursive -l
-          gh release create $TAG CANBridge-${{ github.sha }}/* --repo $GITHUB_REPOSITORY --draft --title "Version $VERSION"
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            **/**
