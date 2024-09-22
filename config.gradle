@@ -14,7 +14,6 @@ nativeUtils {
 }
 
 nativeUtils.wpi.addWarnings()
-nativeUtils.wpi.addWarningsAsErrors()
 
 nativeUtils.setSinglePrintPerPlatform()
 
