@@ -43,8 +43,6 @@
 #include "rev/Drivers/CandleWinUSB/CandleWinUSBDriver.h"
 #endif
 
-#include "rev/Drivers/SerialPort/SerialDriver.h"
-
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
 
@@ -61,7 +59,6 @@ static const std::vector<rev::usb::CANDriver*> CANDriverList = {
 #ifdef _WIN32
     new rev::usb::CandleWinUSBDriver(),
 #endif
-    new rev::usb::SerialDriver()
 };
 
 static std::vector<std::pair<std::unique_ptr<rev::usb::CANDevice>, rev::usb::CANBridge_CANFilter>> CANDeviceList = {};
