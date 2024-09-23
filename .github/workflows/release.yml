@@ -48,6 +48,14 @@ jobs:
           echo "version=$(cat version/version.txt)" >> $GITHUB_OUTPUT
           echo "expectedTagName=v$(cat version/version.txt)" >> $GITHUB_OUTPUT
 
+      # Check if the publish.gradle version matches the tag name
+      - name: Check version
+        run: |
+          if [[ "${{ steps.get-version.outputs.expectedTagName }}" != "${{ env.TAG_NAME }}" ]]; then
+            echo "Version mismatch: ${{ steps.get-version.outputs.expectedTagName }} != ${{ env.TAG_NAME }}"
+            exit 1
+          fi
+
   # Creates a release draft with the artifacts from the build workflow
   prepare-release:
     name: Prepare release
@@ -74,5 +82,7 @@ jobs:
         with:
           draft: true
           generate_release_notes: true
+          tag_name: v${{ steps.get-version.outputs.version }}
+          name: Version ${{ steps.get-version.outputs.version }}
           files: |
             **/**
