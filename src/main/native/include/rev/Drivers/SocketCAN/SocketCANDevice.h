@@ -27,13 +27,12 @@
  */
 
 #pragma once
+#ifdef __linux__
 
 #include <map>
 #include <string>
 
-#include "candlelib/candle.h"
-
-#include "rev/Drivers/CandleWinUSB/CandleWinUSBDeviceThread.h"
+#include "rev/Drivers/SocketCAN/SocketCANThread.h"
 #include "rev/CANDevice.h"
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
@@ -41,17 +40,17 @@
 namespace rev {
 namespace usb {
 
-class CandleWinUSBDevice : public CANDevice {
+class SocketCANDevice : public CANDevice {
 public:
-    CandleWinUSBDevice() =delete;
-    CandleWinUSBDevice(candle_handle hDev);
-    virtual ~CandleWinUSBDevice();
+    SocketCANDevice() = delete;
+    SocketCANDevice(std::string port);
+    virtual ~SocketCANDevice();
 
-    virtual std::string GetName() const override;
-    virtual std::string GetDescriptor() const override;
-    virtual int GetNumberOfErrors() override;
+    virtual std::string GetName() const;
+    virtual std::string GetDescriptor() const;
+    virtual int GetNumberOfErrors();
 
-    virtual int GetId() const override;
+    virtual int GetId() const;
 
     virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
     virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) override;
@@ -61,16 +60,15 @@ public:
 
     virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) override;
     virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) override;
+
     virtual bool IsConnected() override;
-    virtual void setThreadPriority(utils::ThreadPriority priority);
-    virtual void stopRepeatedMessage(uint32_t messageId);
-    virtual void ClearSendQueue();
 private:
-    candle_handle m_handle;
-    CandleWinUSBDeviceThread m_thread;
+    SocketCANDeviceThread m_thread;
     std::string m_descriptor;
     std::string m_name;
 };
 
 } // namespace usb
 } // namespace rev
+
+#endif
