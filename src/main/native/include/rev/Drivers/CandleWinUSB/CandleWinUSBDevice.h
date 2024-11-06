@@ -65,6 +65,7 @@ public:
     virtual void setThreadPriority(utils::ThreadPriority priority);
     virtual void stopRepeatedMessage(uint32_t messageId);
     virtual void ClearSendQueue();
+    virtual bool CopyReceivedMessagesMap(std::map<uint32_t, std::shared_ptr<CANMessage>>& receivedMessagesMap) override;
 private:
     candle_handle m_handle;
     CandleWinUSBDeviceThread m_thread;

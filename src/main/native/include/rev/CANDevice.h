@@ -29,6 +29,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 
 #include "rev/CANMessage.h"
 #include "rev/CANStatus.h"
@@ -81,6 +82,8 @@ public:
     virtual void setThreadPriority(utils::ThreadPriority priority) {};
     virtual void stopRepeatedMessage(uint32_t messageId) {};
     virtual void ClearSendQueue() {};
+
+    virtual bool CopyReceivedMessagesMap(std::map<uint32_t, std::shared_ptr<CANMessage>>& receivedMessagesMap) = 0;
 };
 
 } // namespace usb
