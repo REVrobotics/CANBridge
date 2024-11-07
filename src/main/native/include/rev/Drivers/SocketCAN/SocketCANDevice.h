@@ -27,25 +27,48 @@
  */
 
 #pragma once
+#ifdef __linux__
 
 #include <map>
 #include <string>
 
-#include "rev/CANDriver.h"
+#include "rev/Drivers/SocketCAN/SocketCANThread.h"
+#include "rev/CANDevice.h"
+#include "rev/CANMessage.h"
+#include "rev/CANStatus.h"
 
 namespace rev {
 namespace usb {
 
-class SerialDriver : public CANDriver {
+class SocketCANDevice : public CANDevice {
 public:
-    SerialDriver() {}
-    virtual ~SerialDriver() override {}
+    SocketCANDevice() = delete;
+    SocketCANDevice(std::string port);
+    virtual ~SocketCANDevice();
 
-    virtual std::string GetName() const override {return "Legacy";}
+    virtual std::string GetName() const;
+    virtual std::string GetDescriptor() const;
+    virtual int GetNumberOfErrors();
 
-    virtual std::vector<CANDeviceDetail> GetDevices() override;
-    virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor) override;
+    virtual int GetId() const;
+
+    virtual CANStatus SendCANMessage(const CANMessage& msg, int periodMs) override;
+    virtual CANStatus ReceiveCANMessage(std::shared_ptr<CANMessage>& msg, uint32_t messageID, uint32_t messageMask) override;
+    virtual CANStatus OpenStreamSession(uint32_t* sessionHandle, CANBridge_CANFilter filter, uint32_t maxSize) override;
+    virtual CANStatus CloseStreamSession(uint32_t sessionHandle) override;
+    virtual CANStatus ReadStreamSession(uint32_t sessionHandle, HAL_CANStreamMessage* msgs, uint32_t messagesToRead, uint32_t* messagesRead) override;
+
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr) override;
+    virtual CANStatus GetCANDetailStatus(float* percentBusUtilization, uint32_t* busOff, uint32_t* txFull, uint32_t* receiveErr, uint32_t* transmitErr, uint32_t* lastErrorTime) override;
+
+    virtual bool IsConnected() override;
+private:
+    SocketCANDeviceThread m_thread;
+    std::string m_descriptor;
+    std::string m_name;
 };
 
 } // namespace usb
 } // namespace rev
+
+#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 REV Robotics
+ * Copyright (c) 2019 - 2020 REV Robotics
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
+
 
 #include "rev/Drivers/SerialPort/SerialDriver.h"
 #include "rev/Drivers/SerialPort/SerialDevice.h"
@@ -51,6 +51,7 @@ std::vector<CANDeviceDetail> SerialDriver::GetDevices()
 
     std::vector<serial::PortInfo> found = serial::list_ports();
     for (auto& dev : found) {
+        std::cout << "Found serial device with hardware ID: " + dev.hardware_id + '\n';
         if (parse_serial_com_port(dev.port) != -1 && dev.hardware_id.compare(SparkMax_HardwareId) == 0) {
             std::string name("SPARK MAX"); 
             retval.push_back({dev.port, name, this->GetName()}); 
@@ -81,7 +82,3 @@ std::unique_ptr<CANDevice> SerialDriver::CreateDeviceFromDescriptor(const char* 
 
 } // namespace usb
 } // namespace rev
-
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32

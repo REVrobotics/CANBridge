@@ -36,12 +36,12 @@
 namespace rev {
 namespace usb {
 
-class SerialDriver : public CANDriver {
+class SocketCANDriver : public CANDriver {
 public:
-    SerialDriver() {}
-    virtual ~SerialDriver() override {}
+    SocketCANDriver() {}
+    virtual ~SocketCANDriver() override {}
 
-    virtual std::string GetName() const override {return "Legacy";}
+    virtual std::string GetName() const {return "SocketCAN";}
 
     virtual std::vector<CANDeviceDetail> GetDevices() override;
     virtual std::unique_ptr<CANDevice> CreateDeviceFromDescriptor(const char* descriptor) override;

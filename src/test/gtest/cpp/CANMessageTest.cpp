@@ -41,6 +41,7 @@
  */
 TEST(CANMessageTest, SendAndReceive) {
     auto handle = CANBridge_Scan();
+    int32_t status = 0;
 
     int numDevices = CANBridge_NumDevices(handle);
 

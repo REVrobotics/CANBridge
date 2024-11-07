@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 REV Robotics
+ * Copyright (c) 2019 - 2020 REV Robotics
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
 
 #include "rev/Drivers/SerialPort/SerialDevice.h"
 
@@ -162,6 +161,4 @@ bool SerialDevice::CopyReceivedMessagesMap(std::map<uint32_t, std::shared_ptr<CA
 } // namespace usb
 } // namespace rev
 
-#else
-typedef int __ISOWarning__CLEAR_;
-#endif // _WIN32
+
