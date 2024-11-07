@@ -33,6 +33,7 @@
 
 #include <iostream> //TODO: Remove
 #include <thread>
+#include <map>
 
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
@@ -189,6 +190,11 @@ CANStatus CandleWinUSBDevice::GetCANDetailStatus(float* percentBusUtilization, u
 bool CandleWinUSBDevice::IsConnected()
 {
     return true;
+}
+
+bool CandleWinUSBDevice::CopyReceivedMessagesMap(std::map<uint32_t, std::shared_ptr<CANMessage>>& receivedMessagesMap)
+{
+    return m_thread.ReceiveMessage(receivedMessagesMap);
 }
 
 

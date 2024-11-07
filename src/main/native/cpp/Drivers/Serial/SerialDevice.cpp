@@ -32,6 +32,7 @@
 
 #include <iostream> //TODO: Remove
 #include <thread>
+#include <map>
 
 #include <hal/simulation/CanData.h>
 #include <hal/CAN.h>
@@ -150,6 +151,11 @@ CANStatus SerialDevice::GetCANDetailStatus(float* percentBusUtilization, uint32_
 bool SerialDevice::IsConnected()
 {
     return true;
+}
+
+bool SerialDevice::CopyReceivedMessagesMap(std::map<uint32_t, std::shared_ptr<CANMessage>>& receivedMessagesMap)
+{
+    return m_thread.ReceiveMessage(receivedMessagesMap);
 }
 
 
