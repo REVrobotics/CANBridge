@@ -50,10 +50,10 @@ jobs:
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
           utilWindowsUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-windowsx86-64.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
-          curl -o halWindows.zip "$halWindowsUrl"
-          curl -o halHeaders.zip "$halHeadersUrl"
-          curl -o utilWindows.zip "$utilWindowsUrl"
-          curl -o utilHeaders.zip "$utilHeadersUrl"
+          curl -L -o halWindows.zip "$halWindowsUrl"
+          curl -L -o halHeaders.zip "$halHeadersUrl"
+          curl -L -o utilWindows.zip "$utilWindowsUrl"
+          curl -L -o utilHeaders.zip "$utilHeadersUrl"
           unzip halWindows.zip -d halWindows
           unzip halHeaders.zip -d halHeaders
           unzip utilWindows.zip -d utilWindows
