@@ -57,8 +57,8 @@ jobs:
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
 
-          curl -o halPlatform.zip "$halPlatformUrl"
-          curl -o utilPlatform.zip "$utilPlatformUrl"
+          curl -L -o halPlatform.zip "$halPlatformUrl"
+          curl -L -o utilPlatform.zip "$utilPlatformUrl"
 
       - name: Unzip WPILib HAL artifacts and headers
         run: |
@@ -128,8 +128,8 @@ jobs:
           halPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
           utilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
 
-          curl -o halPlatform.zip "$halPlatformUrl"
-          curl -o utilPlatform.zip "$utilPlatformUrl"
+          curl -L -o halPlatform.zip "$halPlatformUrl"
+          curl -L -o utilPlatform.zip "$utilPlatformUrl"
 
       - name: Unzip WPILib HAL artifacts and headers
         run: |
@@ -184,8 +184,8 @@ jobs:
           halHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-headers.zip
           utilHeadersUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-headers.zip
 
-          curl -o halHeaders.zip "$halHeadersUrl"
-          curl -o utilHeaders.zip "$utilHeadersUrl"
+          curl -L -o halHeaders.zip "$halHeadersUrl"
+          curl -L -o utilHeaders.zip "$utilHeadersUrl"
 
       - name: Unzip WPILib HAL artifacts and headers
         run: |
