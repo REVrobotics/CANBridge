@@ -12,88 +12,8 @@ defaults:
     shell: bash
 
 jobs:
-  # Use WPI provided Docker images to build for Linux ARM32 and ARM64 platforms
-  build-docker:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - container: wpilib/aarch64-cross-ubuntu:bullseye-22.04
-            name: LinuxARM64
-            build-options: "-Ponlylinuxarm64"
-            platform-type: linuxarm64
-            arch: arm64
-          - container: wpilib/raspbian-cross-ubuntu:bullseye-22.04
-            name: LinuxARM32
-            build-options: "-Ponlylinuxarm32"
-            platform-type: linuxarm32
-            arch: arm32
-    runs-on: ubuntu-latest
-    name: "Build - ${{ matrix.name }}"
-    container: ${{ matrix.container }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: 11
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build
-        run: |
-          ./gradlew outputVersions publish ${{ matrix.build-options }} -PreleaseMode
-
-      - name: Download WPILib HAL artifacts and headers for ${{ matrix.platform-type }}
-        run : |
-          halVersion=$(cat wpiHalVersion.txt)
-          
-          sharedHalPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          sharedUtilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}.zip
-          curl -L -o sharedHalPlatform.zip "$sharedHalPlatformUrl"
-          curl -L -o sharedUtilPlatform.zip "$sharedUtilPlatformUrl"
-          
-          staticHalPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/hal/hal-cpp/"$halVersion"/hal-cpp-"$halVersion"-${{ matrix.platform-type }}static.zip
-          staticUtilPlatformUrl=https://frcmaven.wpi.edu/artifactory/release/edu/wpi/first/wpiutil/wpiutil-cpp/"$halVersion"/wpiutil-cpp-"$halVersion"-${{ matrix.platform-type }}static.zip
-          curl -L -o staticHalPlatform.zip "$staticHalPlatformUrl"
-          curl -L -o staticUtilPlatform.zip "$staticUtilPlatformUrl"
-
-      - name: Unzip WPILib HAL artifacts and headers
-        run: |
-          unzip sharedHalPlatform.zip -d sharedHalPlatform
-          unzip sharedUtilPlatform.zip -d sharedUtilPlatform
-          unzip staticHalPlatform.zip -d staticHalPlatform
-          unzip staticUtilPlatform.zip -d staticUtilPlatform
-          mkdir -p CANBridge-artifacts/static
-          mkdir -p CANBridge-artifacts/shared
-
-      # Put Linux ARM release files together in one directory
-      - name: Create Artifact
-        run: |
-          cp build/libs/cANBridge/shared/release/libCANBridge.so CANBridge-artifacts/shared/libCANBridge.so
-          cp sharedHalPlatform/linux/${{ matrix.arch }}/shared/libwpiHal.so CANBridge-artifacts/shared/libwpiHal.so
-          cp sharedUtilPlatform/linux/${{ matrix.arch }}/shared/libwpiutil.so CANBridge-artifacts/shared/libwpiutil.so
-          
-          cp build/libs/cANBridge/static/release/libCANBridge.a CANBridge-artifacts/static/libCANBridge.a
-          cp staticHalPlatform/linux/${{ matrix.arch }}/static/libwpiHal.a CANBridge-artifacts/static/libwpiHal.a
-          cp staticUtilPlatform/linux/${{ matrix.arch }}/static/libwpiutil.a CANBridge-artifacts/static/libwpiutil.a
-
-      # Upload build artifact
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: CANBridge-${{ matrix.platform-type }}-${{ github.sha}}
-          path: CANBridge-artifacts/
-
-  # Use native runners to build for Windows, Linux, and macOS
-  build-native:
-    timeout-minutes: 15
+  # Use native runners to build for Windows, Linux x86-64, and macOS; use WPI provided Docker images to build for Linux ARM32 and ARM64 platforms
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -110,8 +30,21 @@ jobs:
             name: macOS
             platform-type: osxuniversal
             build-options: ""
+          - container: wpilib/aarch64-cross-ubuntu:bullseye-22.04
+            os: ubuntu-latest
+            name: LinuxARM64
+            build-options: "-Ponlylinuxarm64"
+            platform-type: linuxarm64
+            arch: arm64
+          - container: wpilib/raspbian-cross-ubuntu:bullseye-22.04
+            os: ubuntu-latest
+            name: LinuxARM32
+            build-options: "-Ponlylinuxarm32"
+            platform-type: linuxarm32
+            arch: arm32
     name: "Build - ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -185,6 +118,14 @@ jobs:
             cp build/libs/cANBridge/static/osxuniversal/release/libCANBridge.a CANBridge-artifacts/static/
             cp staticHalPlatform/osx/universal/static/libwpiHal.a CANBridge-artifacts/static/
             cp staticUtilPlatform/osx/universal/static/libwpiutil.a CANBridge-artifacts/static/
+          elif [[ "${{ matrix.platform-type }}" == "linuxarm32" || "${{ matrix.platform-type }}" == "linuxarm64" ]]; then
+            cp build/libs/cANBridge/shared/release/libCANBridge.so CANBridge-artifacts/shared/libCANBridge.so
+            cp sharedHalPlatform/linux/${{ matrix.arch }}/shared/libwpiHal.so CANBridge-artifacts/shared/libwpiHal.so
+            cp sharedUtilPlatform/linux/${{ matrix.arch }}/shared/libwpiutil.so CANBridge-artifacts/shared/libwpiutil.so
+            
+            cp build/libs/cANBridge/static/release/libCANBridge.a CANBridge-artifacts/static/libCANBridge.a
+            cp staticHalPlatform/linux/${{ matrix.arch }}/static/libwpiHal.a CANBridge-artifacts/static/libwpiHal.a
+            cp staticUtilPlatform/linux/${{ matrix.arch }}/static/libwpiutil.a CANBridge-artifacts/static/libwpiutil.a
           fi
 
       # Upload build artifact
