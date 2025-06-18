@@ -22,9 +22,13 @@ jobs:
     name: Check build and publish versions
     runs-on: ubuntu-latest
     outputs:
-      TAG_NAME: ${{ env.TAG_NAME }}
+      TAG_NAME: ${{ steps.get_tag.outputs.tag }}
       VERSION: ${{ steps.get_version.outputs.version }}
     steps:
+      - name: Get Tag
+        id: get_tag
+        run: echo "tag=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
+
       - name: Wait for build workflow to finish
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
@@ -51,8 +55,8 @@ jobs:
       # Check if the publish.gradle version matches the tag name
       - name: Check version
         run: |
-          if [[ "${{ steps.get-version.outputs.expectedTagName }}" != "${{ env.TAG_NAME }}" ]]; then
-            echo "Version mismatch: ${{ steps.get-version.outputs.expectedTagName }} != ${{ env.TAG_NAME }}"
+          if [[ "${{ steps.get-version.outputs.expectedTagName }}" != "${{ steps.get_tag.outputs.tag }}" ]]; then
+            echo "Version mismatch: ${{ steps.get-version.outputs.expectedTagName }} != ${{ steps.get_tag.outputs.tag }}"
             exit 1
           fi
 
