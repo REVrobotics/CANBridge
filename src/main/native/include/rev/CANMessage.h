@@ -78,11 +78,12 @@ class CANMessage {
 public:
     CANMessage() : m_data{0}, m_size(0), m_messageId(0) { }
     CANMessage(uint32_t messageId, const uint8_t* data, uint8_t dataSize, uint32_t timestampUs = 0) :
-        m_size(dataSize), m_messageId(messageId) {
-
+        m_messageId(messageId) {
+            // TODO: Support CAN FD
+            m_dataSize = dataSize > 8 ? 8 : dataSize
             m_timestamp = (timestampUs != 0) ? timestampUs : std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
             std::memset(m_data, 0, 8);
-            std::memcpy(m_data, data, dataSize > 8 ? 8 : dataSize);
+            std::memcpy(m_data, data, m_dataSize);
     }
 
     ~CANMessage() = default;
