@@ -30,7 +30,7 @@ jobs:
         run: echo "tag=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for build workflow to finish
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.4.0
         with:
           ref: ${{ github.ref }}
           check-regexp: 'Build|WPILib Headers|Version'
