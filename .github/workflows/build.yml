@@ -47,7 +47,7 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
 
@@ -141,7 +141,7 @@ jobs:
     name: "WPILib Headers"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
       - name: Download WPILib HAL artifacts and headers
@@ -179,7 +179,7 @@ jobs:
     name: "Version"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
 
