@@ -1,5 +1,9 @@
 # CANBridge
 
+> [!IMPORTANT]
+> Firmware version 26.0.0 for all REV products switched to a different USB to CAN protocol, and is not compatible with this repository.
+> The new protocol is consistent with CANable 2.0 SLCan, but with an optional \r\n line feed.
+
 ## Overview
 
 This repository is for the CANBridge software that is run on non-roboRIO platforms.
