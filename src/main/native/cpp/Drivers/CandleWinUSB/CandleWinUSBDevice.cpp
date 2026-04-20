@@ -132,7 +132,7 @@ CANStatus CandleWinUSBDevice::ReceiveCANMessage(std::shared_ptr<CANMessage>& msg
     // Assume timeout
     CANStatus status = CANStatus::kTimeout;
 
-    // parse through the keys, find the messges the match, and return it
+    // parse through the keys, find the messages that match, and return it
     // The first in the message id, then the messages
     std::map<uint32_t, std::shared_ptr<CANMessage>> messages;
     m_thread.ReceiveMessage(messages);
