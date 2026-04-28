@@ -39,7 +39,7 @@ jobs:
 
       # Download artifacts from build workflow
       - name: Download workflow artifacts
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: build.yml
           commit: ${{ github.sha }}
@@ -68,7 +68,7 @@ jobs:
     steps:
       # Download API, docs, and version.txt
       - name: Download workflow artifacts
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: build.yml
           commit: ${{ github.sha }}
